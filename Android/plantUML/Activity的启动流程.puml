@@ -1,0 +1,43 @@
+@startuml
+'https://plantuml.com/sequence-diagram
+
+autonumber 1
+Launcher -> Activity:startActivity
+Activity -> Activity: startActivityForResult
+Activity -> Instrumentation:execStartActivity
+Instrumentation -> IActivityTaskManager :startActivity
+IActivityTaskManager -> ATMS: startActivityAsUser
+ATMS -> ActivityStartController:obtainStarter
+ActivityStartController -> ActivityStarter:execute
+ActivityStarter -> ActivityStarter:executeRequest
+ActivityStarter -> ActivityStarter:startActivityUnchecked
+ActivityStarter -> ActivityStarter:startActivityInner
+ActivityStarter -> RootWindowContainer:resumeFocusedTasksTopActivities
+RootWindowContainer -> Task:resumeTopActivityUncheckedLocked
+Task -> Task:resumeTopActivityInnerLocked
+Task -> TaskFragment:resumeTopActivity
+Task -> ActivityTaskSupervisor:startSpecificActivity
+ActivityTaskSupervisor -> ATMS:startProcessAsync
+ATMS -> LocalService:startProcess
+LocalService -> LocalService:startProcessLocked
+LocalService -> ProcessList:startProcessLocked
+ProcessList -> ProcessList:startProcess
+ProcessList -> ChildZygoteProcess:start
+ChildZygoteProcess -> ZygoteProcess:startViaZygote
+activate ZygoteProcess
+ZygoteProcess -> ZygoteProcess:startViaZygote
+ZygoteProcess -> ZygoteProcess:zygoteSendArgsAndGetResult
+ZygoteProcess -> ZygoteProcess: attemptZygoteSendArgsAndGetResult
+ZygoteProcess -> ZygoteServer:runSelectLoop
+ZygoteServer -> ZygoteConnection:processCommand
+ZygoteConnection -> ZygoteConnection:handleChildProc
+ZygoteConnection -> ZygoteInit:childZygoteInit
+
+ZygoteInit -> ActivityThread:main
+ActivityThread -> ActivityThread:attach
+ActivityThread -> AMS: attachApplication
+AMS -> AMS:attachApplicationLocked
+AMS -> ActivityThread:bindApplication
+
+
+@enduml

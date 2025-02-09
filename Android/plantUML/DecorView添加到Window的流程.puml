@@ -1,0 +1,27 @@
+@startuml
+'https://plantuml.com/sequence-diagram
+
+autonumber 1
+ActivityThread -> ActivityThread: handleResumeActivity
+activate ActivityThread
+ActivityThread -> ActivityThread:performResumeActivity
+ActivityThread -> Activity: performResume
+activate Activity
+Activity -> Instrumentation:callActivityOnResume
+activate Instrumentation
+Instrumentation -> Activity : onResume
+activate Activity
+ActivityThread -> WindowManager : addView
+activate WindowManager
+WindowManager -> WindowManagerGlobal:addView
+activate WindowManagerGlobal
+WindowManagerGlobal -> ViewRootImpl: setView
+activate ViewRootImpl
+ViewRootImpl ->  ViewRootImpl: requestLayout
+ViewRootImpl ->  ViewRootImpl:scheduleTraversals
+ViewRootImpl -> ViewRootImpl:doTraversal
+ViewRootImpl -> ViewRootImpl:performTraversals
+ViewRootImpl -> ViewRootImpl:performMeasure
+ViewRootImpl -> ViewRootImpl:performLayout
+ViewRootImpl -> ViewRootImpl:performDraw
+@enduml

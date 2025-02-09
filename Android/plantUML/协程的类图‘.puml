@@ -1,0 +1,91 @@
+@startuml
+'https://plantuml.com/class-diagram
+
+interface Continuation<in T> {
+    + val context: CoroutineContext
+    + fun resumeWith(result: Result<T>)
+}
+
+abstract class BaseContinuationImpl {
++ fun resumeWith(result: Result<Any?>)
+{abstract} fun invokeSuspend(result: Result<Any?>): Any?
+}
+
+abstract class ContinuationImpl {
+ + fun intercepted(): Continuation<Any?>
+}
+abstract class SuspendLambda
+interface CoroutineContext
+interface Key<E : Element>
+interface Element {
++ val key: Key<*>
+}
+Element --+ CoroutineContext
+Key --+ CoroutineContext
+Element --> Key
+
+Continuation <|.. BaseContinuationImpl
+BaseContinuationImpl <|-- ContinuationImpl
+ContinuationImpl <|-- SuspendLambda
+interface CoroutineScope {
+ + val coroutineContext: CoroutineContext
+}
+abstract class AbstractCoroutine<in T>
+Job <|.. AbstractCoroutine
+JobSupport <|.. AbstractCoroutine
+Continuation <|.. AbstractCoroutine
+CoroutineScope <|.. AbstractCoroutine
+interface Job {
+   + val isActive: Boolean
+   + fun cancel(cause: CancellationException? = null)
+}
+class JobSupport{
+    + fun cancel(cause: CancellationException?)
+    # fun initParentJob(parent: Job?)
+}
+Job <|.. JobSupport
+Element <|.. Job
+class StandaloneCoroutine
+AbstractCoroutine <|-- StandaloneCoroutine
+Continuation --> CoroutineContext
+
+abstract class DispatchedTask<in T> {
++ fun run()
+}
+abstract class Task
+interface Runnable
+Runnable <|.. Task
+Task <|-- DispatchedTask
+class DispatchedContinuation<in T> {
++ val dispatcher: CoroutineDispatcher
++ val continuation: Continuation<T>
+}
+Continuation <|.. DispatchedContinuation
+DispatchedTask <|-- DispatchedContinuation
+
+abstract class CoroutineDispatcher {
+{abstract} fun dispatch(context: CoroutineContext, block: Runnable)
++ fun <T> interceptContinuation(continuation: Continuation<T>): Continuation<T> =
+}
+interface ContinuationInterceptor {
+{abstract} fun <T> interceptContinuation(continuation: Continuation<T>): Continuation<T>
+}
+abstract class AbstractCoroutineContextElement
+class DefaultScheduler
+class SchedulerCoroutineDispatcher {
++ fun dispatch(context: CoroutineContext, block: Runnable): Unit
+}
+abstract class ExecutorCoroutineDispatcher {
+ {abstract} val executor: Executor
+}
+Element <|.. AbstractCoroutineContextElement
+Element <|.. ContinuationInterceptor
+AbstractCoroutineContextElement <|-- CoroutineDispatcher
+ContinuationInterceptor <|-- CoroutineDispatcher
+SchedulerCoroutineDispatcher <|-- DefaultScheduler
+ExecutorCoroutineDispatcher <|-- SchedulerCoroutineDispatcher
+CoroutineDispatcher <|-- ExecutorCoroutineDispatcher
+DispatchedContinuation --> CoroutineDispatcher
+
+
+@enduml

@@ -1,0 +1,29 @@
+@startuml
+'https://plantuml.com/class-diagram
+
+interface CoroutineContext {
+    + fun get(key: Key): E
+    + fun fold(initial: R, operation: (R, Element) -> R): R
+    + fun plus(context: CoroutineContext): CoroutineContext
+    + fun minusKey(key: Key<*>): CoroutineContext
+}
+abstract class AbstractCoroutineContextElement
+interface Element {
++ key: Key<*>
+}
+interface Key<E:Element>
+CoroutineContext <|.. Element
+Element <|.. AbstractCoroutineContextElement
+
+interface Job
+class CoroutineName
+abstract class CoroutineDispatcher
+interface CoroutineExceptionHandler
+
+Element <|.. Job
+Element <|.. CoroutineExceptionHandler
+AbstractCoroutineContextElement <|-- CoroutineDispatcher
+AbstractCoroutineContextElement <|-- CoroutineName
+CoroutineContext +-- Element
+CoroutineContext +-- Key
+@enduml

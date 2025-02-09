@@ -1,0 +1,67 @@
+@startuml
+'https://plantuml.com/class-diagram
+
+interface Continuation<T> {
+ val context: CoroutineContext
+ fun resumeWith(result: Result<T>)
+}
+abstract class BaseContinuationImpl {
+    val completion: Continuation<Any?>?
+    {abstract} fun invokeSuspend(result: Result<Any?>): Any?
+    fun resumeWith(result: Result<Any?>)
+}
+Continuation <|.. BaseContinuationImpl
+abstract class ContinuationImpl {
+val _context: CoroutineContext?
+var intercepted: Continuation<Any?>
+}
+BaseContinuationImpl <|-- ContinuationImpl
+abstract class SuspendLambda
+ContinuationImpl <|-- SuspendLambda
+
+
+
+
+class DispatchedContinuation<T> {
+val dispatcher: CoroutineDispatcher
+val continuation: Continuation<T>
+}
+abstract class DispatchedTask<T> {
+fun run()
+}
+abstract class Task
+interface Runnable
+
+Runnable <|.. Task
+Task <|-- DispatchedTask
+DispatchedTask <|-- DispatchedContinuation
+Continuation <|.. DispatchedContinuation
+DispatchedContinuation --> CoroutineDispatcher
+
+abstract class CoroutineDispatcher
+object DefaultScheduler
+class SchedulerCoroutineDispatcher
+abstract class ExecutorCoroutineDispatcher {
+{abstract} val executor: Executor
+}
+abstract class CoroutineDispatcher {
+{abstract} fun dispatch(context: CoroutineContext, block: Runnable)
+fun <T> interceptContinuation(continuation: Continuation<T>): Continuation<T>
+}
+abstract class AbstractCoroutineContextElement
+interface ContinuationInterceptor {
+fun <T> interceptContinuation(continuation: Continuation<T>): Continuation<T>
+}
+
+AbstractCoroutineContextElement <|-- CoroutineDispatcher
+CoroutineDispatcher <|-- ExecutorCoroutineDispatcher
+ExecutorCoroutineDispatcher <|-- SchedulerCoroutineDispatcher
+SchedulerCoroutineDispatcher <|-- DefaultScheduler
+ContinuationInterceptor <|.. CoroutineDispatcher
+
+
+class CoroutineScheduler
+interface Executor
+Executor <|.. CoroutineScheduler
+ExecutorCoroutineDispatcher --> Executor
+@enduml

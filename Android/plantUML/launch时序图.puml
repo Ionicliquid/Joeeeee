@@ -1,0 +1,12 @@
+@startuml
+'https://plantuml.com/class-diagram
+
+Main -> GlobaScope:launch
+GlobaScope -> StandaloneCoroutine: start
+StandaloneCoroutine -> CoroutineStart :start
+CoroutineStart -> SuspendLambda: startCoroutineCancellable
+SuspendLambda -> SuspendLambda:createCoroutineUnintercepted
+SuspendLambda -> SuspendLambda:intercepted
+SuspendLambda -> DispatchedContinuation:resumeCancellableWith
+
+@enduml

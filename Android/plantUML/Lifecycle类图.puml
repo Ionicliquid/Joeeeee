@@ -1,0 +1,76 @@
+@startuml
+'https://plantuml.com/sequence-diagram
+
+interface LifecycleOwner {
+  Lifecycle getLifecycle();
+}
+interface ViewModelStoreOwner{
+    ViewModelStore getViewModelStore();
+}
+ViewModelStoreOwner ..> ViewModelStore
+class ViewModelStore{
+ HashMap<String, ViewModel> mMap
+}
+abstract class ViewModel
+ViewModelStore *-- ViewModel
+
+interface LifecycleObserver
+
+class ComponentActivity {
+- LifecycleRegistry mLifecycleRegistry
+}
+
+ViewModelStoreOwner <|.. ComponentActivity
+LifecycleOwner <|.. ComponentActivity
+
+class LifecycleRegistry {
+ - FastSafeIterableMap<LifecycleObserver, ObserverWithState> mObserverMap
+}
+LifecycleRegistry *-- LifecycleObserver
+LifecycleRegistry *-- ObserverWithState
+ComponentActivity --> LifecycleRegistry
+
+abstract class Lifecycle {
+ {abstract} void addObserver(LifecycleObserver observer);
+}
+
+Lifecycle <|-- LifecycleRegistry
+
+class ObserverWithState {
+ LifecycleEventObserver mLifecycleObserver;
+}
+interface LifecycleEventObserver {
+ void onStateChanged(LifecycleOwner source,Lifecycle.Event event);
+}
+LifecycleObserver <|-- LifecycleEventObserver
+ObserverWithState --> LifecycleEventObserver
+class FullLifecycleObserverAdapter
+LifecycleEventObserver <|.. FullLifecycleObserverAdapter
+
+
+abstract class LiveData<T> {
+- SafeIterableMap<Observer<? super T>, ObserverWrapper> mObservers
+void observe(LifecycleOwner owner,Observer<? super T> observer)
+}
+
+class LifecycleBoundObserver {
+LifecycleOwner mOwner;
+}
+LifecycleBoundObserver --> LifecycleOwner
+abstract class ObserverWrapper {
+Observer<? super T> mObserver;
+int mLastVersion
+{abstract} boolean shouldBeActive();
+void activeStateChanged(boolean newActive)
+}
+ObserverWrapper <|-- LifecycleBoundObserver
+LifecycleEventObserver <|.. LifecycleBoundObserver
+interface Observer<T> {
+void onChanged(T t);
+}
+ObserverWrapper --> Observer
+LiveData *-- Observer
+LiveData *-- ObserverWrapper
+
+
+@enduml

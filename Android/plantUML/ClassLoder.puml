@@ -1,0 +1,23 @@
+@startuml
+'https://plantuml.com/sequence-diagram
+abstract  class ClassLoader {
+    # {method}Class<?> loadClass(String name, boolean resolve)
+    # {method}Class<?> findClass(String name)
+}
+class PathClassLoader
+class BaseDexClassLoader {
+ {field} DexPathList pathList;
+}
+BaseDexClassLoader <|-- PathClassLoader
+ClassLoader <|-- BaseDexClassLoader
+class BootClassLoader
+ClassLoader <|-- BootClassLoader
+class DexClassLoader
+BaseDexClassLoader <|-- DexClassLoader
+class DexPathList {
+   {field}Element[] dexElements;
+  - {method} Element[] makeDexElements()
+  + {method} Class<?> findClass()
+
+}
+@enduml
