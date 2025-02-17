@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "2025-W07.md",
+                "file": "Android/Kotlin 协程.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "2025-W07"
+              "title": "Kotlin 协程"
             }
           }
         ]
@@ -78,7 +78,7 @@
       }
     ],
     "direction": "horizontal",
-    "width": 224.5
+    "width": 293.5
   },
   "right": {
     "id": "dba7657d843abeea",
@@ -140,13 +140,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "2025-W07.md",
+                "file": "Android/Kotlin 协程.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "2025-W07 的大纲"
+              "title": "Kotlin 协程 的大纲"
             }
           },
           {
@@ -164,7 +164,8 @@
       }
     ],
     "direction": "horizontal",
-    "width": 342.5
+    "width": 200,
+    "collapsed": true
   },
   "left-ribbon": {
     "hiddenItems": {
@@ -178,33 +179,33 @@
   },
   "active": "7eb3606098b49962",
   "lastOpenFiles": [
+    "Android/架构设计之组件化与ARouter实现.md",
+    "Android/java与Kotlin/Kotlin协程.md",
+    "45记录学英语.md",
+    "英语学习/英语老师Lee/每日练习（男声）.md",
+    "英语学习/英语老师Lee/Lee451~500.md",
     "2025-W08.md",
+    "90分钟专注学英语.md",
+    "英语学习/昂克英文君.md",
+    "随笔.md",
     "英语学习/绝望的主妇S1.md",
+    "英语学习/英语老师Lee/Lee401~450.md",
+    "英语学习/发音规则.md",
+    "英语学习/语法总结.md",
+    "2025-W07：失败.md",
+    "2025-W06：失败.md",
+    "英语学习/英语老师Lee/如何练习英语口语.md",
+    "Android/Kotlin 协程.md",
+    "Android/plantUML/未命名.md",
+    "Android/DS面试题.md",
+    "Android/Android之View.md",
+    "Android/Kotlin基础知识.md",
     "Android/开源框架之okhttp.md",
     "Android/开源框架/OkHttp.md",
     "读书笔记/如何保持注意力.md",
-    "2025-W07.md",
-    "英语学习/昂克英文君.md",
-    "2025-W06：失败.md",
     "读书笔记/自控力.md",
     "2025-W10.md",
-    "2025-W04：过年.md",
-    "2025-W05：过年.md",
-    "Android/Kotlin 协程.md",
-    "英语学习/发音规则.md",
-    "随笔.md",
-    "未命名.md",
-    "草稿.md",
-    "2025-W09.md",
     "Android/文档图片/lunch相关类图.png",
-    "2025-W03.md",
-    "2025-W02.md",
-    "150天挑战1.1~5.31/英语学习.md",
-    "150天挑战1.1~5.31/总结.md",
-    "150天挑战1.1~5.31/技术复习进度.md",
-    "150天挑战1.1~5.31/减肥.md",
-    "150天挑战1.1~5.31/读书.md",
-    "Android/java与Kotlin/Kotlin协程.md",
     "未命名",
     "图片/n的发音现象.png",
     "英语学习/新闻",

@@ -390,22 +390,420 @@ public suspend inline fun <T> suspendCancellableCoroutine(
 ### 协程的超时任务
 ### 协程的异常处理
 异常会传递给父协程
+
+
+# Job
+
+## Job的生命周期
+
+![image.png](https://p1-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/e7743d8628b64065b3d8248f26e01350~tplv-k3u1fbpfcp-zoom-in-crop-mark:1512:0:0:0.awebp?)
+
+## AbstractCoroutine#init
+
+```kotlin
+//AbstractCoroutine  
+init {
+        if (initParentJob) initParentJob(parentContext[Job]) //1 
+    }
+
+```
+
+1.  lunch启动协程时,初始化AbstractCoroutine，initParentJob默认为true;
+
+## JobSupport#initParentJob
+
+``` kotlin
+// JobSupport 141
+protected fun initParentJob(parent: Job?) {
+        assert { parentHandle == null }
+        if (parent == null) {
+            parentHandle = NonDisposableHandle
+            return
+        }
+        parent.start() //1
+        val handle = parent.attachChild(this) //2
+        parentHandle = handle //3
+        if (isCompleted) {
+            handle.dispose()
+            parentHandle = NonDisposableHandle 
+        }
+    }
+// JobSupport 376
+public final override fun start(): Boolean {
+        loopOnState { state ->
+            when (startInternal(state)) {
+                FALSE -> return false
+                TRUE -> return true
+            }
+        }
+    }
+
+// JobSupport 389
+private fun startInternal(state: Any?): Int {
+        when (state) {
+                if (state.isActive) return FALSE 
+                if (!_state.compareAndSet(state, EMPTY_ACTIVE)) return RETRY
+                onStart()
+                return TRUE
+            }
+            is InactiveNodeList -> { 
+                if (!_state.compareAndSet(state, state.list)) return RETRY
+                onStart()
+                return TRUE
+            }
+            else -> return FALSE // not a new state
+        }
+    }
+```
+
+2. start：父Job不为空，启动父Job， 将state设置为 EMPTY_ACTIVE 或 NodeList；
+3. attachChild：将父子Job进行关联；
+
+## JobSupport#attachChild
+
+``` kotlin
+// JobSupport 1011
+public final override fun attachChild(child: ChildJob): ChildHandle {
+        val node = ChildHandleNode(child).also { it.job = this } //1
+        val added = tryPutNodeIntoList(node) { _, list -> //2
+            val addedBeforeCancellation = list.addLast(
+                node,
+                LIST_ON_COMPLETION_PERMISSION or LIST_CHILD_PERMISSION or LIST_CANCELLATION_PERMISSION
+            )
+            if (addedBeforeCancellation) {
+                true
+            } else {
+                val addedBeforeCompletion = list.addLast(
+                    node,
+                    LIST_CHILD_PERMISSION or LIST_ON_COMPLETION_PERMISSION
+                )
+                val rootCause = when (val latestState = this.state) {
+                    is Finishing -> {
+					  latestState.rootCause
+                    }
+                    else -> {
+                        assert { latestState !is Incomplete }
+                        (latestState as? CompletedExceptionally)?.cause
+                    }
+                }
+                node.invoke(rootCause)
+                if (addedBeforeCompletion) {
+                    assert { rootCause != null }
+                    true
+                } else {
+                    return NonDisposableHandle
+                }
+            }
+        }
+        if (added) return node
+        node.invoke((state as? CompletedExceptionally)?.cause)
+        return NonDisposableHandle
+    }
+// JobSupport 125
+private val _state = atomic<Any?>(if (active) EMPTY_ACTIVE else EMPTY_NEW)
+
+// JobSupport 532
+    private inline fun tryPutNodeIntoList(
+        node: JobNode,
+        tryAdd: (Incomplete, NodeList) -> Boolean
+    ): Boolean {
+        loopOnState { state ->
+            when (state) {
+                is Empty -> { //1
+                    if (state.isActive) { //2
+                        if (_state.compareAndSet(state, node)) return true
+                    } else
+                        promoteEmptyToNodeList(state) 
+                }
+                is Incomplete -> when (val list = state.list) {
+                    null -> promoteSingleToNodeList(state as JobNode) //3
+                    else -> if (tryAdd(state, list)) return true
+                }
+                else -> return false
+            }
+        }
+    }
+// JobSupport 554
+ private fun promoteEmptyToNodeList(state: Empty) {
+        val list = NodeList()
+        val update = if (state.isActive) list else InactiveNodeList(list)
+        _state.compareAndSet(state, update)
+    }
+// JobSupport 561
+private fun promoteSingleToNodeList(state: JobNode) {
+	state.addOneIfEmpty(NodeList())
+	val list = state.nextNode
+	 _state.compareAndSet(state, list)
+   }
+```
+
+4. 将childJob封装为对应ChildHandleNode，其job和parent 成员指向parent；
+5. tryPutNodeIntoList
+   1. 首次调用state 默认为Empty, 根据isActive不同，对应2种状态EMPTY_ACTIVE else EMPTY_NEW
+   2. 如果isActive == true, 将parent状态设置为ChildHandleNode，否则调用promoteEmptyToNodeList将状态设置为InactiveNodeList；
+   3. 再次加入子Job,state为Incomplete 
+      1. 如state为ChildHandleNode（JobNode.list == null），创建NodeList，并将状态设置为NodeList；
+6. tryAdd
+
+## JobSupport#cancle
+
+``` kotlin
+public override fun cancel(cause: CancellationException?) {
+        cancelInternal(cause ?: defaultCancellationException())
+    }
+
+public open fun cancelInternal(cause: Throwable) {
+        cancelImpl(cause)
+    }
+
+// JobSupport 693
+internal fun cancelImpl(cause: Any?): Boolean {
+        var finalState: Any? = COMPLETING_ALREADY
+        if (onCancelComplete) {
+            finalState = cancelMakeCompleting(cause)
+            if (finalState === COMPLETING_WAITING_CHILDREN) return true
+        }
+        if (finalState === COMPLETING_ALREADY) {
+            finalState = makeCancelling(cause)
+        }
+        return when {
+            finalState === COMPLETING_ALREADY -> true
+            finalState === COMPLETING_WAITING_CHILDREN -> true
+            finalState === TOO_LATE_TO_CANCEL -> false
+            else -> {
+                afterCompletion(finalState)
+                true
+            }
+        }
+    }
+
+```
+
+7. onCancelComplete 默认为false，JobImpl  和 CompletableDeferredImpl重写为false
+
+### JobSupport#makeCancelling
+
+``` kotlin
+// JobSupport 761
+private fun makeCancelling(cause: Any?): Any? {
+        var causeExceptionCache: Throwable? = null 
+        loopOnState { state ->
+            when (state) {
+                is Finishing -> {
+                    val notifyRootCause = synchronized(state) {
+                        if (state.isSealed) return TOO_LATE_TO_CANCEL
+                        val wasCancelling = state.isCancelling 
+                        if (cause != null || !wasCancelling) {
+                            val causeException = causeExceptionCache ?: createCauseException(cause).also { causeExceptionCache = it }
+                            state.addExceptionLocked(causeException)
+                        }
+                        state.rootCause.takeIf { !wasCancelling }
+                    }
+                    notifyRootCause?.let { notifyCancelling(state.list, it) }
+                    return COMPLETING_ALREADY
+                }
+                is Incomplete -> {
+                    val causeException = causeExceptionCache ?: createCauseException(cause).also { causeExceptionCache = it }
+                    if (state.isActive) {
+                        if (tryMakeCancelling(state, causeException)) return COMPLETING_ALREADY //1
+                    } else {
+                      val finalState = tryMakeCompleting(state, CompletedExceptionally(causeException))
+                        when {
+                            finalState === COMPLETING_ALREADY -> error("Cannot happen in $state")
+                            finalState === COMPLETING_RETRY -> return@loopOnState
+                            else -> return finalState
+                        }
+                    }
+                }
+                else -> return TOO_LATE_TO_CANCEL 
+            }
+        }
+    }
+// JobSupport 817
+private fun tryMakeCancelling(state: Incomplete, rootCause: Throwable): Boolean {
+        assert { state !is Finishing } 
+        assert { state.isActive } 
+        val list = getOrPromoteCancellingList(state) ?: return false //1
+        val cancelling = Finishing(list, false, rootCause)
+        if (!_state.compareAndSet(state, cancelling)) return false //2
+        notifyCancelling(list, rootCause)
+        return true
+    }
+
+private fun notifyCancelling(list: NodeList, cause: Throwable) {
+        onCancelling(cause) //1
+        list.close(LIST_CANCELLATION_PERMISSION)
+        notifyHandlers(list, cause) { it.onCancelling } //2
+        cancelParent(cause) //3
+    }
+// JobSupport 360
+private inline fun notifyHandlers(list: NodeList, cause: Throwable?, predicate: (JobNode) -> Boolean) {
+        var exception: Throwable? = null
+        list.forEach { node ->
+            if (node is JobNode && predicate(node)) {
+                try {
+                    node.invoke(cause) //1
+                } catch (ex: Throwable) {
+                    exception?.apply { addSuppressed(ex) } ?: run {
+                        exception = CompletionHandlerException("Exception in completion handler $node for $this", ex)
+                    }
+                }
+            }
+        }
+        exception?.let { handleOnCompletionException(it) }
+    }
+// JobSupport 336
+private fun cancelParent(cause: Throwable): Boolean {
+        if (isScopedCoroutine) return true
+        val isCancellation = cause is CancellationException
+        val parent = parentHandle
+        if (parent === null || parent === NonDisposableHandle) {
+            return isCancellation
+        }
+        return parent.childCancelled(cause) || isCancellation //1
+    }
+
+// ChildHandleNode 1575
+override fun invoke(cause: Throwable?) = childJob.parentCancelled(job)
+// ChildHandleNode 1581
+override fun childCancelled(cause: Throwable): Boolean = job.childCancelled(cause)
+```
+
+8. tryMakeCancelling
+   1.  getOrPromoteCancellingList：返回state对应的list，为空则新建；
+   2. 将state 设置为Finishing
+9. notifyCancelling
+   1. onCancelling 默认为空实现；
+   2. notifyHandlers：通知所有子Job，父Job正在取消，子Job为ChildHandleNode， onCancelling为true;
+      1. 执行其invoke方法，invoke -> JobSupport.parentCancelled -> JobSupport.cancelImpl;
+   3. cancelParent：通知父Job，子Job正在取消，子Job为ChildHandleNode，其job属性和parent属性一样指向父job
+      1. ChildHandleNode.childCancelled -> JobSupport.childCancelled -> JobSupport.cancelImpl；
+
+## JobSupport#makeCompletingOnce
+
+``` kotlin
+//BaseContinuationImpl
+public final override fun resumeWith(result: Result<Any?>) {
+		var current = this
+        var param = result
+        while (true) {
+            //......
+            with(current) {
+                val completion = completion!! 
+                val outcome: Result<Any?> =
+                    try {
+       					//......
+                        Result.success(outcome)
+                    } catch (exception: Throwable) {
+                        Result.failure(exception)
+                    }
+       
+                if (completion is BaseContinuationImpl) {
+				//......
+                } else {
+                   	//1
+                    completion.resumeWith(outcome)
+                    return
+                }
+            }
+        }
+    }
+
+// AbstractCoroutine
+public final override fun resumeWith(result: Result<T>) {
+        val state = makeCompletingOnce(result.toState())
+        if (state === COMPLETING_WAITING_CHILDREN) return
+        afterResume(state)
+    }
+```
+
+10. CoroutineScope.launch的block函数参数为CoroutineScope的扩展函数，传入的scope为AbstractCoroutine，当协程体内业务处理完成，执行completion也就是AbstractCoroutine的resumeWith方法。
+
+### JobSupport#makeCompletingOnce
+
+``` kotlin
+// JobSupport 857
+internal fun makeCompletingOnce(proposedUpdate: Any?): Any? {
+        loopOnState { state ->
+            val finalState = tryMakeCompleting(state, proposedUpdate)
+            when {
+                finalState === COMPLETING_ALREADY ->
+                    throw IllegalStateException(
+                        "Job $this is already complete or completing, " +
+                            "but is being completed with $proposedUpdate", proposedUpdate.exceptionOrNull
+                    )
+                finalState === COMPLETING_RETRY -> return@loopOnState
+                else -> return finalState 
+            }
+        }
+    }
+
+ private fun tryMakeCompleting(state: Any?, proposedUpdate: Any?): Any? {
+        if (state !is Incomplete)
+            return COMPLETING_ALREADY
+        if ((state is Empty || state is JobNode) && state !is ChildHandleNode && proposedUpdate !is CompletedExceptionally) {
+            if (tryFinalizeSimpleState(state, proposedUpdate)) {
+                return proposedUpdate
+            }
+            return COMPLETING_RETRY
+        }
+        return tryMakeCompletingSlowPath(state, proposedUpdate)
+    }
+```
+
+### JobSupport#tryMakeCompletingSlowPath
+
+``` kotlin
+private fun tryMakeCompletingSlowPath(state: Incomplete, proposedUpdate: Any?): Any? {
+    	//1
+        val list = getOrPromoteCancellingList(state) ?: return COMPLETING_RETRY 
+    	//2与cancel时创建的Finish不同，rootCause为空；
+        val finishing = state as? Finishing ?: Finishing(list, false, null)
+        val notifyRootCause: Throwable?
+        synchronized(finishing) {
+            if (finishing.isCompleting) return COMPLETING_ALREADY
+		//3 将isCompleting设置为true；
+            finishing.isCompleting = true 
+            if (finishing !== state) {
+                //4 cas操作修改状态，失败重试；
+                if (!_state.compareAndSet(state, finishing)) return COMPLETING_RETRY
+            }
+            assert { !finishing.isSealed } 
+            val wasCancelling = finishing.isCancelling 
+            (proposedUpdate as? CompletedExceptionally)?.let { finishing.addExceptionLocked(it.cause) }
+          notifyRootCause = finishing.rootCause.takeIf { !wasCancelling }
+        }
+        notifyRootCause?.let { notifyCancelling(list, it) }
+        val child = list.nextChild()
+        if (child != null && tryWaitForChild(finishing, child, proposedUpdate))
+            return COMPLETING_WAITING_CHILDREN
+        list.close(LIST_CHILD_PERMISSION)
+        val anotherChild = list.nextChild()
+        if (anotherChild != null && tryWaitForChild(finishing, anotherChild, proposedUpdate))
+            return COMPLETING_WAITING_CHILDREN
+        return finalizeFinishingState(finishing, proposedUpdate)
+    }
+```
+
 ### SuperVisorJob/supervisorJobScope
 ### 草稿
-4. join与await 10秒与19秒？
-5. supervisorScope 与coroutineScope
-7. 大写的函数 ：简单工厂设计模式
-8. async 立即开始调度 返回值和异常 等待await
-9. 只有顶级协程才能处理异常？ExceptionHandler
-10. 全局异常处理？自定义服务
-11. flow与Rxjava
-12. flow 冷流？
+11. join与await 10秒与19秒？
+12. supervisorScope 与coroutineScope
+13. 大写的函数 ：简单工厂设计模式
+14. async 立即开始调度 返回值和异常 等待await
+15. 只有顶级协程才能处理异常？ExceptionHandler
+16. 全局异常处理？自定义服务
+17. flow与Rxjava
+18. flow 冷流？
 ### flow
-1. Flow上下文保存机制？，上下文保持一致？
+19. Flow上下文保存机制？，上下文保持一致？
 
 
+# 结构化并发
 
-
+协程的**结构化并发**（Structured Concurrency）是一种编程范式，旨在通过**层级化的作用域**和**父子关系**来管理协程的生命周期，确保所有并发任务都能被正确控制、取消和清理，避免资源泄漏或失控任务。它是 Kotlin 协程设计的核心理念之一。
+## 协程作用域
+## 父子协程关系
 # 参考链接
 
 - [Kotlin协程createCoroutine和startCoroutine原理](https://www.cnblogs.com/xfhy/p/17152341.html)
