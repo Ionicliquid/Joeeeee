@@ -13,12 +13,34 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Android/Kotlin 协程.md",
+                "file": "2025-W11.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Kotlin 协程"
+              "title": "2025-W11"
+            }
+          },
+          {
+            "id": "aebc742f59c454d6",
+            "type": "leaf",
+            "state": {
+              "type": "release-notes",
+              "state": {
+                "currentVersion": "1.8.9"
+              },
+              "icon": "lucide-book-up",
+              "title": "Release Notes 1.8.9"
+            }
+          },
+          {
+            "id": "b1e4d785d018985f",
+            "type": "leaf",
+            "state": {
+              "type": "empty",
+              "state": {},
+              "icon": "lucide-file",
+              "title": "新标签页"
             }
           }
         ]
@@ -78,7 +100,7 @@
       }
     ],
     "direction": "horizontal",
-    "width": 293.5
+    "width": 200
   },
   "right": {
     "id": "dba7657d843abeea",
@@ -140,13 +162,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Android/Kotlin 协程.md",
+                "file": "2025-W11.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Kotlin 协程 的大纲"
+              "title": "2025-W11 的大纲"
             }
           },
           {
@@ -160,12 +182,11 @@
             }
           }
         ],
-        "currentTab": 3
+        "currentTab": 4
       }
     ],
     "direction": "horizontal",
-    "width": 200,
-    "collapsed": true
+    "width": 331.5
   },
   "left-ribbon": {
     "hiddenItems": {
@@ -179,32 +200,37 @@
   },
   "active": "7eb3606098b49962",
   "lastOpenFiles": [
+    "英语学习/Family.md",
+    "2025-W11.md",
+    "2025-W10：失败.md",
+    "Android/Kotlin 协程.md",
+    "英语学习/9000句.md",
+    "英语学习/绝望的主妇S1.md",
+    "英语学习/英语老师Lee/Lee451~500.md",
+    "英语学习/英语老师Lee/Lee401~450.md",
+    "英语学习/英语老师Lee/如何练习英语口语.md",
+    "英语学习/zaharaEnglish/美剧精讲精练习.md",
+    "2025-W09：失败 还剩下147天.md",
+    "2025-W08：失败.md",
+    "英语学习/发音规则.md",
+    "2025-W06：失败.md",
+    "英语学习/纸牌屋01.md",
+    "英语学习/昂克英文君.md",
+    "45记录学英语.md",
+    "图片/556.jpg",
+    "图片/556",
+    "图片/556.crdownload",
+    "英语学习/语法总结.md",
+    "英语学习/英语老师Lee/每日练习（男声）.md",
+    "图片/552.jpg",
+    "图片/552.jpg.crdownload",
     "Android/架构设计之组件化与ARouter实现.md",
     "Android/java与Kotlin/Kotlin协程.md",
-    "45记录学英语.md",
-    "英语学习/英语老师Lee/每日练习（男声）.md",
-    "英语学习/英语老师Lee/Lee451~500.md",
-    "2025-W08.md",
     "90分钟专注学英语.md",
-    "英语学习/昂克英文君.md",
     "随笔.md",
-    "英语学习/绝望的主妇S1.md",
-    "英语学习/英语老师Lee/Lee401~450.md",
-    "英语学习/发音规则.md",
-    "英语学习/语法总结.md",
     "2025-W07：失败.md",
-    "2025-W06：失败.md",
-    "英语学习/英语老师Lee/如何练习英语口语.md",
-    "Android/Kotlin 协程.md",
     "Android/plantUML/未命名.md",
     "Android/DS面试题.md",
-    "Android/Android之View.md",
-    "Android/Kotlin基础知识.md",
-    "Android/开源框架之okhttp.md",
-    "Android/开源框架/OkHttp.md",
-    "读书笔记/如何保持注意力.md",
-    "读书笔记/自控力.md",
-    "2025-W10.md",
     "Android/文档图片/lunch相关类图.png",
     "未命名",
     "图片/n的发音现象.png",
@@ -213,9 +239,6 @@
     "英语学习/演讲/温故而知新/1.mp3",
     "英语学习/演讲/温故而知新/温故而知新02-11.mp3",
     "英语学习/演讲/温故而知新/温故而知新02-10.mp3",
-    "英语学习/演讲/温故而知新/温故而知新02-9.mp3",
-    "英语学习/演讲/温故而知新/温故而知新02-8.mp3",
-    "英语学习/演讲/温故而知新/温故而知新02-7.mp3",
-    "英语学习/演讲/温故而知新/温故而知新02-6.mp3"
+    "英语学习/演讲/温故而知新/温故而知新02-9.mp3"
   ]
 }
