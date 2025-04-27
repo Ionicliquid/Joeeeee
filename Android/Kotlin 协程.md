@@ -141,9 +141,9 @@ suspend fun fetchData():String{
 
 一个真正的挂起函数，不是我们用suspend修饰了一个函数，然后在代码块中加点耗时操作就可以。而是只能调用特定的API或者业务中调用了真正的挂起函数。检查方法就是去查看对应的java代码，如果函数执行时先返回IntrinsicsKt.getCOROUTINE_SUSPENDED() 挂起等待恢复，才是真正的挂起函数。
 
-## launch流程分析：挂起后如何自动恢复
+# launch流程分析：挂起后如何自动恢复
 
-### launch
+## launch
 
 ```kotlin
 fun main() {
@@ -370,7 +370,7 @@ public final override fun resumeWith(result: Result<Any?>) {
 
 到这里我们发现，我们说launch方法，启动了一个协程，实际上就是创建一个续体，作为所有挂起函数调用的起点；
 
-### delay
+## delay
 
 #### delay
 
@@ -455,39 +455,6 @@ protected actual fun unpark() {
         if (Thread.currentThread() !== thread)
             unpark(thread)
     }
-
-//DefaultExecutor
-override fun run() {
-        ThreadLocalEventLoop.setEventLoop(this)
-        registerTimeLoopThread()
-        try {
-            var shutdownNanos = Long.MAX_VALUE
-            if (!notifyStartup()) return
-            while (true) {
-                Thread.interrupted() 
-                var parkNanos = processNextEvent()
-                if (parkNanos == Long.MAX_VALUE) {
-                
-                    val now = nanoTime()
-                    if (shutdownNanos == Long.MAX_VALUE) shutdownNanos = now + KEEP_ALIVE_NANOS
-                    val tillShutdown = shutdownNanos - now
-                    if (tillShutdown <= 0) return
-                    parkNanos = parkNanos.coerceAtMost(tillShutdown)
-                } else
-                    shutdownNanos = Long.MAX_VALUE
-                if (parkNanos > 0) {
-             
-                    if (isShutdownRequested) return
-                    parkNanos(this, parkNanos)
-                }
-            }
-        } finally {
-            _thread = null
-            acknowledgeShutdownIfNeeded()
-            unregisterTimeLoopThread()
-            if (!isEmpty) thread 
-        }
-    }
 ```
 
 schedule:执行task
@@ -543,30 +510,130 @@ override fun processNextEvent(): Long {
     }
 ```
 
+## launch与async的区别
+
+```kotlin
+public fun <T> CoroutineScope.async(
+    context: CoroutineContext = EmptyCoroutineContext,
+    start: CoroutineStart = CoroutineStart.DEFAULT,
+    block: suspend CoroutineScope.() -> T
+): Deferred<T> {
+    val newContext = newCoroutineContext(context)
+    val coroutine = if (start.isLazy)
+        LazyDeferredCoroutine(newContext, block) else
+        DeferredCoroutine<T>(newContext, active = true)
+    coroutine.start(start, coroutine, block)
+    return coroutine
+}
 
 
-​	
+private open class DeferredCoroutine<T>(
+    parentContext: CoroutineContext,
+    active: Boolean
+) : AbstractCoroutine<T>(parentContext, true, active = active), Deferred<T> {
+    override fun getCompleted(): T = getCompletedInternal() as T
+    override suspend fun await(): T = awaitInternal() as T
+    override val onAwait: SelectClause1<T> get() = onAwaitInternal as SelectClause1<T>
+}
+```
+
+1. 与launch方法一样，async也可以启动一个协程，但async返回Deferred；
 
 # CoroutineScope
 
-#### 常用的子类
+## 常用的子类
+
 GlobalScope: 进程级别，跟随App进程；
 MainScope: 在Activity中使用，可以在onDestroy中使用
 ViewModelScope:绑定ViewModel生命周期；
 LifecycleScope: 跟随Lifecycle生命周期，绑定Activity/Fragment的生命周期
-Scope如何实现生命周期管理？
+
+## SuperVisorJob/supervisorJobScope
+
+```kotlin
+private class SupervisorJobImpl(parent: Job?) : JobImpl(parent) {
+    override fun childCancelled(cause: Throwable): Boolean = false
+}
+```
+
+重写childCancelled方法，不执行任何逻辑，隔离子协程的异常；
+
+## Scope如何实现生命周期管理:以LifecycleScope为例
+
+```kotlin
+
+public val LifecycleOwner.lifecycleScope: LifecycleCoroutineScope
+    get() = lifecycle.coroutineScope
+
+public val Lifecycle.coroutineScope: LifecycleCoroutineScope
+    get() {
+        while (true) {
+            val existing = internalScopeRef.get() as LifecycleCoroutineScopeImpl?
+            if (existing != null) {
+                return existing
+            }
+            val newScope = LifecycleCoroutineScopeImpl(
+                this,
+                SupervisorJob() + Dispatchers.Main.immediate
+            )
+            if (internalScopeRef.compareAndSet(null, newScope)) {
+                newScope.register()
+                return newScope
+            }
+        }
+    }
+
+
+internal class LifecycleCoroutineScopeImpl(
+    override val lifecycle: Lifecycle,
+    override val coroutineContext: CoroutineContext
+) : LifecycleCoroutineScope(), LifecycleEventObserver {
+    init {
+        if (lifecycle.currentState == Lifecycle.State.DESTROYED) {
+            coroutineContext.cancel()
+        }
+    }
+
+    fun register() {
+        launch(Dispatchers.Main.immediate) {
+            if (lifecycle.currentState >= Lifecycle.State.INITIALIZED) {
+                lifecycle.addObserver(this@LifecycleCoroutineScopeImpl)
+            } else {
+                coroutineContext.cancel()
+            }
+        }
+    }
+
+    override fun onStateChanged(source: LifecycleOwner, event: Lifecycle.Event) {
+        if (lifecycle.currentState <= Lifecycle.State.DESTROYED) {
+            lifecycle.removeObserver(this)
+            coroutineContext.cancel()
+        }
+    }
+}
+
+public fun CoroutineContext.cancel(cause: CancellationException? = null) {
+    this[Job]?.cancel(cause)
+}
+```
+
+1. LifecycleCoroutineScopeImpl 同时实现CoroutineScope 和 LifecycleEventObserver接口，对象创建时就通过register实现与Lifecycle生命周期绑定；
+2. 当Activity destroy时，执行 coroutineContext.cancel，也就是SupervisorJob的cancel方法回到Job的逻辑中。
 
 # CoroutineContext
 
-#### 简介
+## 简介
 
 保存协程上下文的自定义集合，主要由以下4个`Element`组成：
 - `Job`：协程的唯一标识，用来控制协程的生命周期(`new、active、completing、completed、cancelling、cancelled`)；
 - `CoroutineDispatcher`：协程调度器，指定协程运行的线程(`IO、Default、Main、Unconfined`);
 - `CoroutineName`: 指定协程的名称，默认为coroutine;
 - `CoroutineExceptionHandler`: 指定协程的异常处理器，用来处理未捕获的异常.
-#### 数据结构
-##### Element
+
+## 数据结构
+
+### Element
+
 ``` kotlin
 public interface Key<E : Element>
 
@@ -586,7 +653,9 @@ public interface Element : CoroutineContext {
 }
 ```
 CoroutineContext中的元素都必须实现Element接口，每个元素都有唯一的Key, 原来检索元素。
-##### `plus`
+
+### plus
+
 ``` kotlin
 public operator fun plus(context: CoroutineContext): CoroutineContext =  
     if (context === EmptyCoroutineContext) this else // fast path -- avoid lambda creation  
@@ -618,29 +687,34 @@ public operator fun plus(context: CoroutineContext): CoroutineContext =
 ### 协程的异常处理
 异常会传递给父协程
 
-
 # Job
+
+## 简介
+
+```kotlin
+public interface Job : CoroutineContext.Element {
+    public companion object Key : CoroutineContext.Key<Job>
+}
+```
+
+Job是CoroutineContext集合的重要组成元素，Key类型为Job;
 
 ## Job的生命周期
 
 ![image.png](https://p1-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/e7743d8628b64065b3d8248f26e01350~tplv-k3u1fbpfcp-zoom-in-crop-mark:1512:0:0:0.awebp?)
 
-## AbstractCoroutine#init
-
 ```kotlin
-//AbstractCoroutine  
-init {
-        if (initParentJob) initParentJob(parentContext[Job]) //1 
-    }
-
+private val _state = atomic<Any?>(if (active) EMPTY_ACTIVE else EMPTY_NEW)
 ```
 
-1.  lunch启动协程时,初始化AbstractCoroutine，initParentJob默认为true;
-
-## JobSupport#initParentJob
+## initParentJob
 
 ``` kotlin
-// JobSupport 141
+//AbstractCoroutine
+init {
+    if (initParentJob) initParentJob(parentContext[Job]) //1
+}
+//JobSupport
 protected fun initParentJob(parent: Job?) {
         assert { parentHandle == null }
         if (parent == null) {
@@ -655,7 +729,6 @@ protected fun initParentJob(parent: Job?) {
             parentHandle = NonDisposableHandle 
         }
     }
-// JobSupport 376
 public final override fun start(): Boolean {
         loopOnState { state ->
             when (startInternal(state)) {
@@ -665,7 +738,6 @@ public final override fun start(): Boolean {
         }
     }
 
-// JobSupport 389
 private fun startInternal(state: Any?): Int {
         when (state) {
                 if (state.isActive) return FALSE 
@@ -678,18 +750,20 @@ private fun startInternal(state: Any?): Int {
                 onStart()
                 return TRUE
             }
-            else -> return FALSE // not a new state
+            else -> return FALSE 
         }
     }
 ```
 
-2. start：父Job不为空，启动父Job， 将state设置为 EMPTY_ACTIVE 或 NodeList；
-3. attachChild：将父子Job进行关联；
+1. 通过lunch启动协程时,初始化AbstractCoroutine，initParentJob默认为true;
+2. initParentJob，启动协程的CoroutineContext中是否包含Job Element，此Job为父Job
+   1. start：父Job不为空，启动父Job， 将state设置为 EMPTY_ACTIVE 或 NodeList；
+   2. attachChild：将父子Job进行关联；
 
-## JobSupport#attachChild
+## attachChild
 
 ``` kotlin
-// JobSupport 1011
+
 public final override fun attachChild(child: ChildJob): ChildHandle {
         val node = ChildHandleNode(child).also { it.job = this } //1
         val added = tryPutNodeIntoList(node) { _, list -> //2
@@ -726,10 +800,7 @@ public final override fun attachChild(child: ChildJob): ChildHandle {
         node.invoke((state as? CompletedExceptionally)?.cause)
         return NonDisposableHandle
     }
-// JobSupport 125
-private val _state = atomic<Any?>(if (active) EMPTY_ACTIVE else EMPTY_NEW)
 
-// JobSupport 532
     private inline fun tryPutNodeIntoList(
         node: JobNode,
         tryAdd: (Incomplete, NodeList) -> Boolean
@@ -744,19 +815,18 @@ private val _state = atomic<Any?>(if (active) EMPTY_ACTIVE else EMPTY_NEW)
                 }
                 is Incomplete -> when (val list = state.list) {
                     null -> promoteSingleToNodeList(state as JobNode) //3
-                    else -> if (tryAdd(state, list)) return true
+                    else -> if (tryAdd(state, list)) return true 
                 }
                 else -> return false
             }
         }
     }
-// JobSupport 554
  private fun promoteEmptyToNodeList(state: Empty) {
         val list = NodeList()
         val update = if (state.isActive) list else InactiveNodeList(list)
         _state.compareAndSet(state, update)
     }
-// JobSupport 561
+
 private fun promoteSingleToNodeList(state: JobNode) {
 	state.addOneIfEmpty(NodeList())
 	val list = state.nextNode
@@ -764,15 +834,16 @@ private fun promoteSingleToNodeList(state: JobNode) {
    }
 ```
 
-4. 将childJob封装为对应ChildHandleNode，其job和parent 成员指向parent；
-5. tryPutNodeIntoList
+1. 将childJob封装为对应ChildHandleNode，其job和parent 成员指向parent；
+2. tryPutNodeIntoList
+
    1. 首次调用state 默认为Empty, 根据isActive不同，对应2种状态EMPTY_ACTIVE else EMPTY_NEW
    2. 如果isActive == true, 将parent状态设置为ChildHandleNode，否则调用promoteEmptyToNodeList将状态设置为InactiveNodeList；
-   3. 再次加入子Job,state为Incomplete 
-      1. 如state为ChildHandleNode（JobNode.list == null），创建NodeList，并将状态设置为NodeList；
-6. tryAdd
+   3. 后续再加入子Job,父Job的state已经是Incomplete 
+      1. state.list == null，创建NodeList，并将state设置为NodeList；
+      2. state.list !=null，执行tryAdd逻辑，将子Job加入到list中；
 
-## JobSupport#cancle
+## cancle
 
 ``` kotlin
 public override fun cancel(cause: CancellationException?) {
@@ -783,10 +854,9 @@ public open fun cancelInternal(cause: Throwable) {
         cancelImpl(cause)
     }
 
-// JobSupport 693
 internal fun cancelImpl(cause: Any?): Boolean {
         var finalState: Any? = COMPLETING_ALREADY
-        if (onCancelComplete) {
+        if (onCancelComplete) { //1
             finalState = cancelMakeCompleting(cause)
             if (finalState === COMPLETING_WAITING_CHILDREN) return true
         }
@@ -806,17 +876,16 @@ internal fun cancelImpl(cause: Any?): Boolean {
 
 ```
 
-7. onCancelComplete 默认为false，JobImpl  和 CompletableDeferredImpl重写为false
+onCancelComplete 默认为false，JobImpl  和 CompletableDeferredImpl重写为true
 
-### JobSupport#makeCancelling
+### makeCancelling
 
 ``` kotlin
-// JobSupport 761
 private fun makeCancelling(cause: Any?): Any? {
         var causeExceptionCache: Throwable? = null 
         loopOnState { state ->
             when (state) {
-                is Finishing -> {
+                is Finishing -> { //1
                     val notifyRootCause = synchronized(state) {
                         if (state.isSealed) return TOO_LATE_TO_CANCEL
                         val wasCancelling = state.isCancelling 
@@ -832,7 +901,7 @@ private fun makeCancelling(cause: Any?): Any? {
                 is Incomplete -> {
                     val causeException = causeExceptionCache ?: createCauseException(cause).also { causeExceptionCache = it }
                     if (state.isActive) {
-                        if (tryMakeCancelling(state, causeException)) return COMPLETING_ALREADY //1
+                        if (tryMakeCancelling(state, causeException)) return COMPLETING_ALREADY //2
                     } else {
                       val finalState = tryMakeCompleting(state, CompletedExceptionally(causeException))
                         when {
@@ -846,7 +915,13 @@ private fun makeCancelling(cause: Any?): Any? {
             }
         }
     }
-// JobSupport 817
+
+
+```
+
+### tryMakeCancelling
+
+````kotlin
 private fun tryMakeCancelling(state: Incomplete, rootCause: Throwable): Boolean {
         assert { state !is Finishing } 
         assert { state.isActive } 
@@ -863,7 +938,7 @@ private fun notifyCancelling(list: NodeList, cause: Throwable) {
         notifyHandlers(list, cause) { it.onCancelling } //2
         cancelParent(cause) //3
     }
-// JobSupport 360
+
 private inline fun notifyHandlers(list: NodeList, cause: Throwable?, predicate: (JobNode) -> Boolean) {
         var exception: Throwable? = null
         list.forEach { node ->
@@ -879,7 +954,7 @@ private inline fun notifyHandlers(list: NodeList, cause: Throwable?, predicate: 
         }
         exception?.let { handleOnCompletionException(it) }
     }
-// JobSupport 336
+
 private fun cancelParent(cause: Throwable): Boolean {
         if (isScopedCoroutine) return true
         val isCancellation = cause is CancellationException
@@ -894,17 +969,19 @@ private fun cancelParent(cause: Throwable): Boolean {
 override fun invoke(cause: Throwable?) = childJob.parentCancelled(job)
 // ChildHandleNode 1581
 override fun childCancelled(cause: Throwable): Boolean = job.childCancelled(cause)
-```
+````
 
-8. tryMakeCancelling
-   1.  getOrPromoteCancellingList：返回state对应的list，为空则新建；
+1. tryMakeCancelling
+   1. getOrPromoteCancellingList：返回state对应的list，state为Empty则新建；
    2. 将state 设置为Finishing
-9. notifyCancelling
+
+2. notifyCancelling
    1. onCancelling 默认为空实现；
-   2. notifyHandlers：通知所有子Job，父Job正在取消，子Job为ChildHandleNode， onCancelling为true;
-      1. 执行其invoke方法，invoke -> JobSupport.parentCancelled -> JobSupport.cancelImpl;
-   3. cancelParent：通知父Job，子Job正在取消，子Job为ChildHandleNode，其job属性和parent属性一样指向父job
-      1. ChildHandleNode.childCancelled -> JobSupport.childCancelled -> JobSupport.cancelImpl；
+   2. notifyHandlers：通知所有子Job，父Job正在取消；
+      1. 子Job一般为ChildHandleNode， onCancelling为true,执行其的invoke方法;
+      2. 执行其invoke方法，invoke -> JobSupport.parentCancelled -> JobSupport.cancelImpl;
+   3. cancelParent：通知父Job，子Job正在取消；
+
 
 ## JobSupport#makeCompletingOnce
 
@@ -1012,52 +1089,417 @@ private fun tryMakeCompletingSlowPath(state: Incomplete, proposedUpdate: Any?): 
     }
 ```
 
-## SuperVisorJob/supervisorJobScope
+# Flow
+
+## 简介
 
 ```kotlin
-private class SupervisorJobImpl(parent: Job?) : JobImpl(parent) {
-    override fun childCancelled(cause: Throwable): Boolean = false
+public interface Flow<out T> {
+    public suspend fun collect(collector: FlowCollector<T>)
+}
+
+public fun interface FlowCollector<in T> {
+    public suspend fun emit(value: T)
 }
 ```
 
-1. 重写childCancelled方法，不执行任何逻辑，隔离子协程的异常；
+Flow是基于协程的响应式数据流，上游实现为Flow，负责数据的产生、变换、组合，下游为FlowCollector负责消费数据；
 
-### 草稿
-11. join与await 10秒与19秒？
-12. supervisorScope 与coroutineScope
-13. 大写的函数 ：简单工厂设计模式
-14. async 立即开始调度 返回值和异常 等待await
-15. 只有顶级协程才能处理异常？ExceptionHandler
-16. 全局异常处理？自定义服务
-17. flow与Rxjava
-18. flow 冷流？
-# Flow
-19. Flow上下文保存机制？，上下文保持一致？
+## 冷流
 
+数据只有在有消费者（collect）时才开始生产
+
+```kotlin
+fun main() {
+    GlobalScope.launch {
+        flow {
+            for(i in 0 ..3){
+                emit(1)
+            }
+        }.collect{
+            println(it)
+        }
+    }
+    Thread.sleep(10000)
+}
+
+public fun <T> flow(block: suspend FlowCollector<T>.() -> Unit): Flow<T> = SafeFlow(block)
+
+private class SafeFlow<T>(private val block: suspend FlowCollector<T>.() -> Unit) : AbstractFlow<T>() {
+    override suspend fun collectSafely(collector: FlowCollector<T>) {
+        collector.block()
+    }
+}
+
+//AbstractFlow
+public final override suspend fun collect(collector: FlowCollector<T>) {
+        val safeCollector = SafeCollector(collector, coroutineContext)
+        try {
+            collectSafely(safeCollector)
+        } finally {
+            safeCollector.releaseIntercepted()
+        }
+    }
+```
+
+## map
+
+map为Flow的扩展函数，扩展对象为flow1,返回一个新的flow对象 flow2;
+
+```java
+public inline fun <T, R> Flow<T>.map(crossinline transform: suspend (value: T) -> R): Flow<R> = transform { value ->
+    return@transform emit(transform(value))//3
+}
+
+public inline fun <T, R> Flow<T>.transform(
+    @BuilderInference crossinline transform: suspend FlowCollector<R>.(value: T) -> Unit
+): Flow<R> = flow { //1
+    collect { value -> //2
+        return@collect transform(value)
+    }
+}
+
+```
+
+1. 创建一个新的Flow  flow2;
+2. 为flow1新建一个FlowCollector,首先执行Flow1的collect，传入原始数据value;
+3. 为flow2指定FlowCollector后，emit经过transform之后的value;
+
+## 热流
+
+数据的生成与收集者无关，即使没有订阅者也会执行（需手动启动）
+
+### MutableStateFlow
+
+### MutableSharedFlow
+
+```kotlin
+public fun <T> MutableSharedFlow(
+    replay: Int = 0,
+    extraBufferCapacity: Int = 0,
+    onBufferOverflow: BufferOverflow = BufferOverflow.SUSPEND
+): MutableSharedFlow<T> {
+    require(replay >= 0) { "replay cannot be negative, but was $replay" }
+    require(extraBufferCapacity >= 0) { "extraBufferCapacity cannot be negative, but was $extraBufferCapacity" }
+    require(replay > 0 || extraBufferCapacity > 0 || onBufferOverflow == BufferOverflow.SUSPEND) {
+        "replay or extraBufferCapacity must be positive with non-default onBufferOverflow strategy $onBufferOverflow"
+    }
+    val bufferCapacity0 = replay + extraBufferCapacity
+    val bufferCapacity = if (bufferCapacity0 < 0) Int.MAX_VALUE else bufferCapacity0 
+    return SharedFlowImpl(replay, bufferCapacity, onBufferOverflow) //1
+}
+```
+
+1. SharedFlowImpl
+   1. replay：新订阅者接收的历史数据量；
+   2. bufferCapacity：额外缓冲区大小
+   3. onBufferOverflow:默认为SUSPEND
+
+#### emit
+
+```kotlin
+override suspend fun emit(value: T) {
+        if (tryEmit(value)) return 
+        emitSuspend(value)
+    }
+
+override fun tryEmit(value: T): Boolean {
+        var resumes: Array<Continuation<Unit>?> = EMPTY_RESUMES
+        val emitted = synchronized(this) {
+            if (tryEmitLocked(value)) {
+                resumes = findSlotsToResumeLocked(resumes)
+                true
+            } else {
+                false
+            }
+        }
+        for (cont in resumes) cont?.resume(Unit)
+        return emitted
+    }
+
+private fun tryEmitLocked(value: T): Boolean {
+        if (nCollectors == 0) return tryEmitNoCollectorsLocked(value)
+        if (bufferSize >= bufferCapacity && minCollectorIndex <= replayIndex) {
+            when (onBufferOverflow) {
+                BufferOverflow.SUSPEND -> return false 
+                BufferOverflow.DROP_LATEST -> return true 
+                BufferOverflow.DROP_OLDEST -> {}
+            }
+        }
+        enqueueLocked(value)
+        bufferSize++
+        if (bufferSize > bufferCapacity) dropOldestLocked()
+        if (replaySize > replay) { 
+            updateBufferLocked(replayIndex + 1, minCollectorIndex, bufferEndIndex, queueEndIndex)
+        }
+        return true
+    }
+
+private fun tryEmitNoCollectorsLocked(value: T): Boolean {
+        assert { nCollectors == 0 } //1
+        if (replay == 0) return true //2
+        enqueueLocked(value) 
+        bufferSize++ 
+        if (bufferSize > replay) dropOldestLocked()
+        minCollectorIndex = head + bufferSize 
+        return true
+    }
+```
+
+1. emit
+   1. tryEmit:尝试发射数据，成功则返回
+   2. emitSuspend
+2. tryEmit
+   1. tryEmitLocked
+3. tryEmitLocked
+   1. tryEmitNoCollectorsLocked，当前没有指定收集者
+4. tryEmitNoCollectorsLocked
+   1. 当前不存在订阅者；
+   2. 无需保存历史数据；
+5. enqueueLocked
+
+## flowOn的实现
+
+```kotlin
+public fun <T> Flow<T>.flowOn(context: CoroutineContext): Flow<T> {
+    checkFlowContext(context)
+    return when {
+        context == EmptyCoroutineContext -> this
+        this is FusibleFlow -> fuse(context = context)
+        else -> ChannelFlowOperatorImpl(this, context = context)
+    }
+}
+```
+
+
+
+# CancellableContinuationImpl
+
+CancellableContinuationImpl 监听协程取消的Continuation
+
+```kotlin
+public override fun initCancellability() {
+        val handle = installParentHandle()
+            ?: return
+        if (isCompleted) {
+            handle.dispose()
+            _parentHandle.value = NonDisposableHandle
+        }
+    }
+
+private fun installParentHandle(): DisposableHandle? {
+        val parent = context[Job] ?: return null 
+        val handle = parent.invokeOnCompletion(handler = ChildContinuation(this))
+        _parentHandle.compareAndSet(null, handle)
+        return handle
+    }
+
+internal fun Job.invokeOnCompletion(
+    invokeImmediately: Boolean = true,
+    handler: JobNode,
+): DisposableHandle = when (this) {
+    is JobSupport -> invokeOnCompletionInternal(invokeImmediately, handler)
+    else -> invokeOnCompletion(handler.onCancelling, invokeImmediately, handler::invoke)
+}
+//JobSupport
+internal fun invokeOnCompletionInternal(
+        invokeImmediately: Boolean,
+        node: JobNode
+    ): DisposableHandle {
+        node.job = this
+        val added = tryPutNodeIntoList(node) { state, list ->
+            if (node.onCancelling) {
+                val rootCause = (state as? Finishing)?.rootCause
+                if (rootCause == null) {
+                    list.addLast(node, LIST_CANCELLATION_PERMISSION or LIST_ON_COMPLETION_PERMISSION)
+                } else {
+                    if (invokeImmediately) node.invoke(rootCause)
+                    return NonDisposableHandle
+                }
+            } else {
+                list.addLast(node, LIST_ON_COMPLETION_PERMISSION)
+            }
+        }
+        when {
+            added -> return node
+            invokeImmediately -> node.invoke((state as? CompletedExceptionally)?.cause)
+        }
+        return NonDisposableHandle
+    }
+```
+
+1. 跟踪它的初始化流程initCancellability -> installParentHandle->invokeOnCompletion->invokeOnCompletionInternal
+2. 熟悉的tryPutNodeIntoList，在Job的cancel流程中了解到，该方法会将子Job节点加入到父Job的状态管理列表中。
 
 # 结构化并发
 
-协程的**结构化并发**（Structured Concurrency）是一种编程范式，旨在通过**层级化的作用域**和**父子关系**来管理协程的生命周期，确保所有并发任务都能被正确控制、取消和清理，避免资源泄漏或失控任务。它是 Kotlin 协程设计的核心理念之一。
-## 协程作用域
-## 父子协程关系
+Kotlin 协程的 **结构化并发（Structured Concurrency）** 是一种通过 **层级化作用域** 和 **父子关系** 来管理协程生命周期的机制，旨在确保协程的资源安全、避免泄漏，并简化异步代码的编写与维护。以下是其核心概念和实际应用的详细解析：
+
+---
+
+### 1. **结构化并发的核心思想**
+- **层级管理**：协程通过父子关系形成树状结构，父协程控制子协程的生命周期。
+- **自动传播**：父协程取消时，所有子协程自动取消；子协程失败时，默认会传播异常到父协程。
+- **资源安全**：确保协程及其资源（如数据库连接、网络请求）在不再需要时被及时释放。
+
+---
+
+### 2. **关键组件**
+#### 2.1 **协程作用域（CoroutineScope）**
+- **定义**：协程运行的上下文环境，包含 `Job` 和 `CoroutineDispatcher`。
+- **常见作用域**：
+  - **GlobalScope**：全局作用域（慎用，生命周期与应用一致，易泄漏）。
+  - **viewModelScope**：与 ViewModel 绑定，当 ViewModel 销毁时自动取消。
+  - **lifecycleScope**：与 Lifecycle 组件（如 Activity/Fragment）绑定。
+  - **自定义作用域**：通过 `CoroutineScope(SupervisorJob() + Dispatchers.IO)` 创建。
+
+#### 2.2 **Job 与 SupervisorJob**
+- **Job**：表示一个协程任务，支持取消和层级管理。
+- **SupervisorJob**：子协程的失败不会影响其他子协程或父协程，常用于需要独立处理异常的协程树。
+
+---
+
+### 3. **结构化并发的运作机制**
+#### 3.1 **父子关系与取消传播**
+- **创建子协程**：通过 `launch` 或 `async` 在父作用域内启动协程。
+- **取消流程**：
+  - 父协程取消 → 所有子协程递归取消。
+  - 子协程抛出异常 → 默认取消父协程及其兄弟协程（除非使用 `SupervisorJob`）。
+
+```kotlin
+// 示例：父作用域取消导致子协程终止
+val parentJob = Job()
+val scope = CoroutineScope(parentJob + Dispatchers.Main)
+
+scope.launch {
+    launch { // 子协程1
+        delay(1000)
+        println("子协程1完成")
+    }
+    launch { // 子协程2
+        delay(2000)
+        println("子协程2完成")
+    }
+}
+
+// 取消父作用域，所有子协程终止
+parentJob.cancel()
+```
+
+#### 3.2 **异常传播与处理**
+- **默认行为**：子协程抛出未捕获异常时，父协程会取消，并传播异常。
+- **SupervisorJob 的隔离异常**：
+  ```kotlin
+  val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+  scope.launch {
+      launch {
+          throw Exception("子协程失败") // 不会影响其他子协程
+      }
+      launch {
+          delay(1000)
+          println("其他子协程正常执行")
+      }
+  }
+  ```
+
+---
+
+### 4. **结构化并发的实际应用**
+#### 4.1 **在 ViewModel 中使用 viewModelScope**
+- **自动绑定生命周期**：当 ViewModel 的 `onCleared()` 被调用时，所有协程自动取消。
+  ```kotlin
+  class MyViewModel : ViewModel() {
+      fun fetchData() {
+          viewModelScope.launch {
+              // 发起网络请求或数据库操作
+              val data = repository.loadData()
+              _dataLiveData.value = data
+          }
+      }
+  }
+  ```
+
+#### 4.2 **避免协程泄漏**
+- **错误示例**：使用 `GlobalScope` 可能导致协程泄漏。
+  ```kotlin
+  // 错误：Activity 销毁后协程仍在运行
+  class MyActivity : AppCompatActivity() {
+      override fun onCreate() {
+          GlobalScope.launch { // 避免使用 GlobalScope
+              delay(5000)
+              updateUI() // 可能导致崩溃（Activity 已销毁）
+          }
+      }
+  }
+  ```
+
+- **正确示例**：使用 `lifecycleScope` 绑定生命周期。
+  ```kotlin
+  class MyActivity : AppCompatActivity() {
+      override fun onCreate() {
+          lifecycleScope.launch {
+              delay(5000)
+              if (isActive) { // 检查作用域是否仍活跃
+                  updateUI()
+              }
+          }
+      }
+  }
+  ```
+
+---
+
+### 5. **结构化并发的优势**
+| 优势             | 说明                                                 |
+| ---------------- | ---------------------------------------------------- |
+| **自动取消**     | 父协程取消时，所有子协程递归终止，避免资源泄漏。     |
+| **简化错误处理** | 异常通过协程树自动传播，减少手动处理异常的代码。     |
+| **代码可读性高** | 协程代码按层级组织，逻辑更清晰。                     |
+| **生命周期安全** | 与组件（如 ViewModel、Activity）绑定，避免无效操作。 |
+
+---
+
+### 6. **常见问题与解决方案**
+#### 6.1 **协程未及时取消**
+- **问题**：未绑定正确作用域，导致协程泄漏。
+- **解决**：始终使用组件相关的作用域（如 `viewModelScope`、`lifecycleScope`）。
+
+#### 6.2 **异常处理不当**
+- **问题**：子协程异常导致父协程意外终止。
+- **解决**：
+  - 使用 `try/catch` 包裹可能抛出异常的代码。
+  - 使用 `SupervisorJob` 隔离异常影响范围。
+  - 定义 `CoroutineExceptionHandler` 全局处理异常。
+
+#### 6.3 **阻塞主线程**
+- **问题**：在主线程启动耗时协程导致界面卡顿。
+- **解决**：切换调度器（如 `Dispatchers.IO` 或 `Dispatchers.Default`）。
+  ```kotlin
+  viewModelScope.launch(Dispatchers.IO) {
+      val data = performBlockingOperation()
+      withContext(Dispatchers.Main) { // 切回主线程更新 UI
+          updateUI(data)
+      }
+  }
+  ```
+
+---
+
+### 7. **总结**
+Kotlin 协程的 **结构化并发** 通过层级化的作用域管理，解决了传统异步编程中常见的资源泄漏、异常传播混乱和生命周期耦合问题。开发者应：
+
+1. **优先使用组件作用域**（如 `viewModelScope`、`lifecycleScope`）。
+2. **避免全局作用域**（`GlobalScope`）以防止协程泄漏。
+3. **合理处理异常**，结合 `SupervisorJob` 和 `CoroutineExceptionHandler`。
+4. **利用调度器**（Dispatchers）优化线程使用，避免阻塞主线程。
+
+通过遵循这些实践，可以编写出更安全、高效且易维护的异步代码。
 
 
-
-# 总结
-
-协程2个核心设计
-
-1. 挂起函数
-   1. 挂起与恢复的概念：阻塞式与非阻塞式
-   2. 协程的挂起恢复：用阻塞式的代码风格实现非阻塞式的逻辑
-      1. CPS转换：为挂起函数添加一个参数称为续体，挂起函数恢复后，由续体决定接下来的操作，它的作用和callback一样。
-      2. 状态机：将挂起函数转换为一个状态机，每个挂起点对应一个状态，并将状态保存续体中，并通过 `Continuation` 控制恢复，恢复时执行下一个状态的挂起直到函数返回。
-2. 结构化并发
-   1. 通过层级作用域和父子关系来管理协程的生命周期
-   2. 通过Job来实现
 
 # 参考链接
 
 - [Kotlin协程createCoroutine和startCoroutine原理](https://www.cnblogs.com/xfhy/p/17152341.html)
   - [IntrinsicsJvm.kt](https://github.com/JetBrains/kotlin/blob/master/libraries/stdlib/jvm/src/kotlin/coroutines/intrinsics/IntrinsicsJvm.kt)
 - [使用PlantUML绘制类图](https://juejin.cn/post/6844903731293585421?searchId=20241002214831CBFB639525066B7006C1)
+- [【kotlin】- delay函数实现原理](https://www.jianshu.com/p/2bcd6e21b496)
