@@ -1,7 +1,6 @@
-# 挂起函数
-## 挂起与恢复
+# 挂起与恢复
 线程A挂起，等待线程B的执行，线程B执行完成，通知线程A恢复执行；挂起分为阻塞时挂起与非阻塞式挂起。
-### 阻塞式
+## 阻塞式
 `join`实现
 
 ```java
@@ -24,7 +23,7 @@ public void blockSuspend() {
     }
 ```
 
-### 非阻塞式
+## 非阻塞式
 在`Android`中通过`Handler`消息机制实现
 
 ```kotlin
@@ -34,7 +33,7 @@ thread {
 }.start()
 ```
 
-### 协程式
+## 协程式
 
 在协程作用域内，用阻塞式的代码风格实现非阻塞式的挂起与恢复。
 
@@ -60,7 +59,7 @@ suspend fun fetchData():String{
 
 用delay模拟在子线程中获取数据，又恢复到主线程中执行；
 
-## 什么是挂起函数？
+## 挂起函数
 用suspend修饰的函数，称为挂起函数。挂起函数只能在挂起函数内调用。
 
 ### 实现原理
@@ -141,6 +140,26 @@ suspend fun fetchData():String{
 
 一个真正的挂起函数，不是我们用suspend修饰了一个函数，然后在代码块中加点耗时操作就可以。而是只能调用特定的API或者业务中调用了真正的挂起函数。检查方法就是去查看对应的java代码，如果函数执行时先返回IntrinsicsKt.getCOROUTINE_SUSPENDED() 挂起等待恢复，才是真正的挂起函数。
 
+# 结构化并发
+
+Kotlin 协程的 **结构化并发（Structured Concurrency）** 是一种通过 **层级化作用域** 和 **父子关系** 来管理协程生命周期的机制，旨在确保协程的资源安全、避免泄漏，并简化异步代码的编写与维护
+
+## 结构化并发的核心思想
+- **层级管理**：协程通过父子关系形成树状结构，父协程控制子协程的生命周期。
+- **自动传播**：父协程取消时，所有子协程自动取消；子协程失败时，默认会传播异常到父协程。
+- **资源安全**：确保协程及其资源（如数据库连接、网络请求）在不再需要时被及时释放。
+## 关键组件
+### 协程作用域（CoroutineScope)
+- **定义**：协程运行的上下文环境，包含 `Job` 和 `CoroutineDispatcher`。
+- **常见作用域**：
+  - **GlobalScope**：全局作用域（慎用，生命周期与应用一致，易泄漏）。
+  - **viewModelScope**：与 ViewModel 绑定，当 ViewModel 销毁时自动取消。
+  - **lifecycleScope**：与 Lifecycle 组件（如 Activity/Fragment）绑定。
+  - **自定义作用域**：通过 `CoroutineScope(SupervisorJob() + Dispatchers.IO)` 创建。
+
+### Job 与 SupervisorJob
+- **Job**：表示一个协程任务，支持取消和层级管理。
+- **SupervisorJob**：子协程的失败不会影响其他子协程或父协程，常用于需要独立处理异常的协程树。
 # launch流程分析：挂起后如何自动恢复
 
 ## launch
@@ -221,8 +240,8 @@ public static final void main() {
    }
 ```
 
-1. lunch是CoroutineScope的扩展函数，第三个参数block是CoroutineScope扩展函数同时也是挂起函数，这也是函数体内能调用其他挂起函数的原因；
-2. block 同时也可以简化为`suspend (R) -> T` ，挂起函数为会函数添加一个参数，所以block是同时实现Function2和挂起接口的函数对象 `final class com/example/myapplication/coroutine/MyCoroutineKt$main$1 extends kotlin/coroutines/jvm/internal/SuspendLambda implements kotlin/jvm/functions/Function2 `；为了方便我们称`MyCoroutineKt$main$1`为`Block`
+1. launch是协作作用域（CoroutineScope）的扩展函数，函数中的block参数是CoroutineScope扩展函数同时也是挂起函数，这也是函数体内能调用其他挂起函数的原因；
+2. block 同时也可以简化为`suspend (R) -> T` ，又因为挂起函数为会函数添加一个续体参数，所以block是同时实现Function2和挂起接口的函数对象 `final class com/example/myapplication/coroutine/MyCoroutineKt$main$1 extends kotlin/coroutines/jvm/internal/SuspendLambda implements kotlin/jvm/functions/Function2 `；为了方便我们称`MyCoroutineKt$main$1`为`Block`
 
 ### startCoroutineCancellable
 ``` kotlin
@@ -269,7 +288,9 @@ intercepted
 public final override fun <T> interceptContinuation(continuation: Continuation<T>): Continuation<T> =  
 DispatchedContinuation(this, continuation)
 ```
-1. CoroutineStart 重载了invoke函数，一个kotlin 语法糖，可以直接通过对象调用该方法;
+1. CoroutineStart 重载了invoke函数，
+   1. invoke kotlin 语法糖，可以直接通过对象调用该方法;
+
 2. start 默认为CoroutineStart.DEFAULT;
 3. createCoroutineUnintercepted：block 为BaseContinuationImpl的子类对象，实现create方法，返回一个新的Continuation对象；
 
@@ -510,7 +531,7 @@ override fun processNextEvent(): Long {
     }
 ```
 
-## launch与async的区别
+## async
 
 ```kotlin
 public fun <T> CoroutineScope.async(
@@ -538,6 +559,31 @@ private open class DeferredCoroutine<T>(
 ```
 
 1. 与launch方法一样，async也可以启动一个协程，但async返回Deferred；
+
+### await
+
+```kotlin
+protected suspend fun awaitInternal(): Any? {
+        while (true) { // lock-free loop on state
+            val state = this.state
+            if (state !is Incomplete) {
+                if (state is CompletedExceptionally) {
+                    recoverAndThrow(state.cause)
+                }
+                return state.unboxState()
+            }
+            if (startInternal(state) >= 0) break
+        }
+        return awaitSuspend()
+    }
+
+private suspend fun awaitSuspend(): Any? = suspendCoroutineUninterceptedOrReturn { uCont ->
+        val cont = AwaitContinuation(uCont.intercepted(), this)
+        cont.initCancellability()
+        cont.disposeOnCancellation(invokeOnCompletion(handler = ResumeAwaitOnCompletion(cont)))
+        cont.getResult()
+    }
+```
 
 # CoroutineScope
 
@@ -983,7 +1029,7 @@ override fun childCancelled(cause: Throwable): Boolean = job.childCancelled(caus
    3. cancelParent：通知父Job，子Job正在取消；
 
 
-## JobSupport#makeCompletingOnce
+## makeCompletingOnce
 
 ``` kotlin
 //BaseContinuationImpl
@@ -1023,7 +1069,7 @@ public final override fun resumeWith(result: Result<T>) {
 
 10. CoroutineScope.launch的block函数参数为CoroutineScope的扩展函数，传入的scope为AbstractCoroutine，当协程体内业务处理完成，执行completion也就是AbstractCoroutine的resumeWith方法。
 
-### JobSupport#makeCompletingOnce
+### makeCompletingOnce
 
 ``` kotlin
 // JobSupport 857
@@ -1055,7 +1101,7 @@ internal fun makeCompletingOnce(proposedUpdate: Any?): Any? {
     }
 ```
 
-### JobSupport#tryMakeCompletingSlowPath
+### tryMakeCompletingSlowPath
 
 ``` kotlin
 private fun tryMakeCompletingSlowPath(state: Incomplete, proposedUpdate: Any?): Any? {
@@ -1331,171 +1377,7 @@ internal fun invokeOnCompletionInternal(
 1. 跟踪它的初始化流程initCancellability -> installParentHandle->invokeOnCompletion->invokeOnCompletionInternal
 2. 熟悉的tryPutNodeIntoList，在Job的cancel流程中了解到，该方法会将子Job节点加入到父Job的状态管理列表中。
 
-# 结构化并发
-
-Kotlin 协程的 **结构化并发（Structured Concurrency）** 是一种通过 **层级化作用域** 和 **父子关系** 来管理协程生命周期的机制，旨在确保协程的资源安全、避免泄漏，并简化异步代码的编写与维护。以下是其核心概念和实际应用的详细解析：
-
----
-
-### 1. **结构化并发的核心思想**
-- **层级管理**：协程通过父子关系形成树状结构，父协程控制子协程的生命周期。
-- **自动传播**：父协程取消时，所有子协程自动取消；子协程失败时，默认会传播异常到父协程。
-- **资源安全**：确保协程及其资源（如数据库连接、网络请求）在不再需要时被及时释放。
-
----
-
-### 2. **关键组件**
-#### 2.1 **协程作用域（CoroutineScope）**
-- **定义**：协程运行的上下文环境，包含 `Job` 和 `CoroutineDispatcher`。
-- **常见作用域**：
-  - **GlobalScope**：全局作用域（慎用，生命周期与应用一致，易泄漏）。
-  - **viewModelScope**：与 ViewModel 绑定，当 ViewModel 销毁时自动取消。
-  - **lifecycleScope**：与 Lifecycle 组件（如 Activity/Fragment）绑定。
-  - **自定义作用域**：通过 `CoroutineScope(SupervisorJob() + Dispatchers.IO)` 创建。
-
-#### 2.2 **Job 与 SupervisorJob**
-- **Job**：表示一个协程任务，支持取消和层级管理。
-- **SupervisorJob**：子协程的失败不会影响其他子协程或父协程，常用于需要独立处理异常的协程树。
-
----
-
-### 3. **结构化并发的运作机制**
-#### 3.1 **父子关系与取消传播**
-- **创建子协程**：通过 `launch` 或 `async` 在父作用域内启动协程。
-- **取消流程**：
-  - 父协程取消 → 所有子协程递归取消。
-  - 子协程抛出异常 → 默认取消父协程及其兄弟协程（除非使用 `SupervisorJob`）。
-
-```kotlin
-// 示例：父作用域取消导致子协程终止
-val parentJob = Job()
-val scope = CoroutineScope(parentJob + Dispatchers.Main)
-
-scope.launch {
-    launch { // 子协程1
-        delay(1000)
-        println("子协程1完成")
-    }
-    launch { // 子协程2
-        delay(2000)
-        println("子协程2完成")
-    }
-}
-
-// 取消父作用域，所有子协程终止
-parentJob.cancel()
-```
-
-#### 3.2 **异常传播与处理**
-- **默认行为**：子协程抛出未捕获异常时，父协程会取消，并传播异常。
-- **SupervisorJob 的隔离异常**：
-  ```kotlin
-  val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-  scope.launch {
-      launch {
-          throw Exception("子协程失败") // 不会影响其他子协程
-      }
-      launch {
-          delay(1000)
-          println("其他子协程正常执行")
-      }
-  }
-  ```
-
----
-
-### 4. **结构化并发的实际应用**
-#### 4.1 **在 ViewModel 中使用 viewModelScope**
-- **自动绑定生命周期**：当 ViewModel 的 `onCleared()` 被调用时，所有协程自动取消。
-  ```kotlin
-  class MyViewModel : ViewModel() {
-      fun fetchData() {
-          viewModelScope.launch {
-              // 发起网络请求或数据库操作
-              val data = repository.loadData()
-              _dataLiveData.value = data
-          }
-      }
-  }
-  ```
-
-#### 4.2 **避免协程泄漏**
-- **错误示例**：使用 `GlobalScope` 可能导致协程泄漏。
-  ```kotlin
-  // 错误：Activity 销毁后协程仍在运行
-  class MyActivity : AppCompatActivity() {
-      override fun onCreate() {
-          GlobalScope.launch { // 避免使用 GlobalScope
-              delay(5000)
-              updateUI() // 可能导致崩溃（Activity 已销毁）
-          }
-      }
-  }
-  ```
-
-- **正确示例**：使用 `lifecycleScope` 绑定生命周期。
-  ```kotlin
-  class MyActivity : AppCompatActivity() {
-      override fun onCreate() {
-          lifecycleScope.launch {
-              delay(5000)
-              if (isActive) { // 检查作用域是否仍活跃
-                  updateUI()
-              }
-          }
-      }
-  }
-  ```
-
----
-
-### 5. **结构化并发的优势**
-| 优势             | 说明                                                 |
-| ---------------- | ---------------------------------------------------- |
-| **自动取消**     | 父协程取消时，所有子协程递归终止，避免资源泄漏。     |
-| **简化错误处理** | 异常通过协程树自动传播，减少手动处理异常的代码。     |
-| **代码可读性高** | 协程代码按层级组织，逻辑更清晰。                     |
-| **生命周期安全** | 与组件（如 ViewModel、Activity）绑定，避免无效操作。 |
-
----
-
-### 6. **常见问题与解决方案**
-#### 6.1 **协程未及时取消**
-- **问题**：未绑定正确作用域，导致协程泄漏。
-- **解决**：始终使用组件相关的作用域（如 `viewModelScope`、`lifecycleScope`）。
-
-#### 6.2 **异常处理不当**
-- **问题**：子协程异常导致父协程意外终止。
-- **解决**：
-  - 使用 `try/catch` 包裹可能抛出异常的代码。
-  - 使用 `SupervisorJob` 隔离异常影响范围。
-  - 定义 `CoroutineExceptionHandler` 全局处理异常。
-
-#### 6.3 **阻塞主线程**
-- **问题**：在主线程启动耗时协程导致界面卡顿。
-- **解决**：切换调度器（如 `Dispatchers.IO` 或 `Dispatchers.Default`）。
-  ```kotlin
-  viewModelScope.launch(Dispatchers.IO) {
-      val data = performBlockingOperation()
-      withContext(Dispatchers.Main) { // 切回主线程更新 UI
-          updateUI(data)
-      }
-  }
-  ```
-
----
-
-### 7. **总结**
-Kotlin 协程的 **结构化并发** 通过层级化的作用域管理，解决了传统异步编程中常见的资源泄漏、异常传播混乱和生命周期耦合问题。开发者应：
-
-1. **优先使用组件作用域**（如 `viewModelScope`、`lifecycleScope`）。
-2. **避免全局作用域**（`GlobalScope`）以防止协程泄漏。
-3. **合理处理异常**，结合 `SupervisorJob` 和 `CoroutineExceptionHandler`。
-4. **利用调度器**（Dispatchers）优化线程使用，避免阻塞主线程。
-
-通过遵循这些实践，可以编写出更安全、高效且易维护的异步代码。
-
-
+# suspendCoroutineUninterceptedOrReturn
 
 # 参考链接
 
