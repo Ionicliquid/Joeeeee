@@ -27,16 +27,15 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Android/Kotlin 协程.md",
+                "file": "5.1复习计划.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Kotlin 协程"
+              "title": "5.1复习计划"
             }
           }
-        ],
-        "currentTab": 1
+        ]
       }
     ],
     "direction": "vertical"
@@ -93,8 +92,7 @@
       }
     ],
     "direction": "horizontal",
-    "width": 200,
-    "collapsed": true
+    "width": 200
   },
   "right": {
     "id": "dba7657d843abeea",
@@ -156,13 +154,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Android/Kotlin 协程.md",
+                "file": "面试草稿.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Kotlin 协程 的大纲"
+              "title": "面试草稿 的大纲"
             }
           },
           {
@@ -192,14 +190,14 @@
       "command-palette:打开命令面板": false
     }
   },
-  "active": "99c07e4d204d567e",
+  "active": "30be18390afa91ee",
   "lastOpenFiles": [
+    "5.1复习计划.md",
     "面试草稿.md",
     "2025-W19.md",
-    "Android/Kotlin 协程.md",
     "2025-W18：Android完成.md",
+    "Android/Kotlin 协程.md",
     "Android/java与Kotlin/JVM的内存管理与垃圾回收.md",
-    "5.1复习计划.md",
     "Android/Kotlin基础知识.md",
     "Android/简历.md",
     "英语学习/Moden Family 06.md",
