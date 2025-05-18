@@ -1,168 +1,7 @@
-# 挂起与恢复
-线程A挂起，等待线程B的执行，线程B执行完成，通知线程A恢复执行；挂起分为阻塞时挂起与非阻塞式挂起。
-## 阻塞式
-`join`实现
+# 协程
+## launch流程分析：如何启动一个协程
 
-```java
-public void blockSuspend() {
-        Thread t1 = new Thread(() -> {
-            System.out.println("t1 run");
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-        });
-        t1.start();
-        try {
-            t1.join();
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
-        System.out.println("main run");
-    }
-```
-
-## 非阻塞式
-在`Android`中通过`Handler`消息机制实现
-
-```kotlin
-val handler = Handler(Looper.getMainLooper())
-thread {    
-    handler.post(...)
-}.start()
-```
-
-## 协程式
-
-在协程作用域内，用阻塞式的代码风格实现非阻塞式的挂起与恢复。
-
-```kotlin
-fun main() {
-    GlobalScope.launch{
-       val name = fetchData()
-        println("name $name")
-    }
-    println("main end")
-    Thread.sleep(2000)
-}
-
-
-suspend fun fetchData():String{
-    delay(1000)
-    return "Joe"
-}
-
-//main end
-//name Joe
-```
-
-用delay模拟在子线程中获取数据，又恢复到主线程中执行；
-
-## 挂起函数
-用suspend修饰的函数，称为挂起函数。挂起函数只能在挂起函数内调用。
-
-### 实现原理
-
-定义挂起函数
-
-```kotlin
-suspend fun fetchData():String{
-    delay(1000)
-    return "Joe"
-}
-```
-对应的Java代码
-
-> Tools -> Koltin -> Show Kotlin ByteCode
-
-```java
- @Nullable
-   public static final Object fetchData(@NotNull Continuation var0) { //1
-      Object $continuation;
-      label20: {
-         if (var0 instanceof <undefinedtype>) {
-            $continuation = (<undefinedtype>)var0;
-            if ((((<undefinedtype>)$continuation).label & Integer.MIN_VALUE) != 0) {
-               ((<undefinedtype>)$continuation).label -= Integer.MIN_VALUE;
-               break label20;
-            }
-         }
-
-         $continuation = new ContinuationImpl(var0) { //2
-            Object result;
-            int label;
-
-            @Nullable
-            public final Object invokeSuspend(@NotNull Object $result) { //4
-               this.result = $result;
-               this.label |= Integer.MIN_VALUE;
-               return MyCoroutineKt.fetchData(this);
-            }
-         };
-      }
-
-      Object $result = ((<undefinedtype>)$continuation).result;
-      Object var3 = IntrinsicsKt.getCOROUTINE_SUSPENDED();
-      switch (((<undefinedtype>)$continuation).label) {
-         case 0: //3
-            ResultKt.throwOnFailure($result);
-            ((<undefinedtype>)$continuation).label = 1;
-            if (DelayKt.delay(1000L, (Continuation)$continuation) == var3) {
-               return var3;
-            }
-            break;
-         case 1:
-            ResultKt.throwOnFailure($result);
-            break;
-         default:
-            throw new IllegalStateException("call to 'resume' before 'invoke' with coroutine");
-      }
-
-      return "Joe";
-   }
-
-```
-1. 经过编译后，为挂起函数添加Continuation类型的参数，称为续体；
-2. 创建匿名续体对象$continuation，将新增的续体参数保存在属性completion，从它的名称就可知道它的作用就是用来执行完挂起函数后恢复协程的执行。
-3. 当函数被调用时label为0，将$continuation对象传递挂起函数delay，delay也是一个挂起函数，label+1，自身挂起；
-4. 由delay函数调用$continuation的invokeSuspend方法恢复挂起函数执行，执行下一个lable业务；
-
-#### CPS转换
-
-为函数添加一个Continuation类型的参数，用于接受函数执行的结果，在挂起函数恢复后，由续体来决定接下来的操作，作用和handler中的callback类似。比如我们在挂起函数调用delay,实际上是将当前函数在delay之后的逻辑封装成续体，delay执行完，由续体来执行之后的业务。
-
-#### 状态机
-
-将挂起函数转换为一个状态机，每个挂起点对应一个状态，并将状态保存续体中，并通过 `Continuation` 控制恢复，恢复时执行下一个状态的挂起直到函数返回。
-
-### 挂起点
-
-一个真正的挂起函数，不是我们用suspend修饰了一个函数，然后在代码块中加点耗时操作就可以。而是只能调用特定的API或者业务中调用了真正的挂起函数。检查方法就是去查看对应的java代码，如果函数执行时先返回IntrinsicsKt.getCOROUTINE_SUSPENDED() 挂起等待恢复，才是真正的挂起函数。
-
-# 结构化并发
-
-Kotlin 协程的 **结构化并发（Structured Concurrency）** 是一种通过 **层级化作用域** 和 **父子关系** 来管理协程生命周期的机制，旨在确保协程的资源安全、避免泄漏，并简化异步代码的编写与维护
-
-## 结构化并发的核心思想
-- **层级管理**：协程通过父子关系形成树状结构，父协程控制子协程的生命周期。
-- **自动传播**：父协程取消时，所有子协程自动取消；子协程失败时，默认会传播异常到父协程。
-- **资源安全**：确保协程及其资源（如数据库连接、网络请求）在不再需要时被及时释放。
-## 关键组件
-### 协程作用域（CoroutineScope)
-- **定义**：协程运行的上下文环境，包含 `Job` 和 `CoroutineDispatcher`。
-- **常见作用域**：
-  - **GlobalScope**：全局作用域（慎用，生命周期与应用一致，易泄漏）。
-  - **viewModelScope**：与 ViewModel 绑定，当 ViewModel 销毁时自动取消。
-  - **lifecycleScope**：与 Lifecycle 组件（如 Activity/Fragment）绑定。
-  - **自定义作用域**：通过 `CoroutineScope(SupervisorJob() + Dispatchers.IO)` 创建。
-
-### Job 与 SupervisorJob
-- **Job**：表示一个协程任务，支持取消和层级管理。
-- **SupervisorJob**：子协程的失败不会影响其他子协程或父协程，常用于需要独立处理异常的协程树。
-# launch流程分析：挂起后如何自动恢复
-
-## launch
+### launch
 
 ```kotlin
 fun main() {
@@ -289,12 +128,12 @@ public final override fun <T> interceptContinuation(continuation: Continuation<T
 DispatchedContinuation(this, continuation)
 ```
 1. CoroutineStart 重载了invoke函数，
-   1. invoke kotlin 语法糖，可以直接通过对象调用该方法;
+   2. invoke kotlin 语法糖，可以直接通过对象调用该方法;
 
-2. start 默认为CoroutineStart.DEFAULT;
-3. createCoroutineUnintercepted：block 为BaseContinuationImpl的子类对象，实现create方法，返回一个新的Continuation对象；
+3. start 默认为CoroutineStart.DEFAULT;
+4. createCoroutineUnintercepted：block 为BaseContinuationImpl的子类对象，实现create方法，返回一个新的Continuation对象；
 
-4. intercepted：创建DispatchedContinuation，同时持有Continuation和Dispatcher，作为分发业务执行线程的桥梁；
+5. intercepted：创建DispatchedContinuation，同时持有Continuation和Dispatcher，作为分发业务执行线程的桥梁；
 
 > block.create ->continuation:ContinuationImpl 
 > continuation.completion == StandaloneCoroutine
@@ -391,7 +230,7 @@ public final override fun resumeWith(result: Result<Any?>) {
 
 到这里我们发现，我们说launch方法，启动了一个协程，实际上就是创建一个续体，作为所有挂起函数调用的起点；
 
-## delay
+### delay
 
 #### delay
 
@@ -531,7 +370,7 @@ override fun processNextEvent(): Long {
     }
 ```
 
-## async
+### async
 
 ```kotlin
 public fun <T> CoroutineScope.async(
@@ -585,14 +424,160 @@ private suspend fun awaitSuspend(): Any? = suspendCoroutineUninterceptedOrReturn
     }
 ```
 
-# CoroutineScope
+## 挂起与恢复
+线程A挂起，等待线程B的执行，线程B执行完成，通知线程A恢复执行；挂起分为阻塞时挂起与非阻塞式挂起。
+### 阻塞式
+`join`实现
 
-## 常用的子类
+```java
+public void blockSuspend() {
+        Thread t1 = new Thread(() -> {
+            System.out.println("t1 run");
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        });
+        t1.start();
+        try {
+            t1.join();
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+        System.out.println("main run");
+    }
+```
 
-GlobalScope: 进程级别，跟随App进程；
-MainScope: 在Activity中使用，可以在onDestroy中使用
-ViewModelScope:绑定ViewModel生命周期；
-LifecycleScope: 跟随Lifecycle生命周期，绑定Activity/Fragment的生命周期
+### 非阻塞式
+在`Android`中通过`Handler`消息机制实现
+
+```kotlin
+val handler = Handler(Looper.getMainLooper())
+thread {    
+    handler.post(...)
+}.start()
+```
+
+### 协程式
+
+在协程作用域内，用阻塞式的代码风格实现非阻塞式的挂起与恢复。
+
+```kotlin
+fun main() {
+    GlobalScope.launch{
+       val name = fetchData()
+        println("name $name")
+    }
+    println("main end")
+    Thread.sleep(2000)
+}
+
+
+suspend fun fetchData():String{
+    delay(1000)
+    return "Joe"
+}
+
+//main end
+//name Joe
+```
+
+用delay模拟在子线程中获取数据，又恢复到主线程中执行；
+
+### 挂起函数
+用suspend修饰的函数，称为挂起函数。挂起函数只能在挂起函数内调用。
+
+#### 实现原理
+
+定义挂起函数
+
+```kotlin
+suspend fun fetchData():String{
+    delay(1000)
+    return "Joe"
+}
+```
+对应的Java代码
+
+> Tools -> Koltin -> Show Kotlin ByteCode
+
+```java
+ @Nullable
+   public static final Object fetchData(@NotNull Continuation var0) { //1
+      Object $continuation;
+      label20: {
+         if (var0 instanceof <undefinedtype>) {
+            $continuation = (<undefinedtype>)var0;
+            if ((((<undefinedtype>)$continuation).label & Integer.MIN_VALUE) != 0) {
+               ((<undefinedtype>)$continuation).label -= Integer.MIN_VALUE;
+               break label20;
+            }
+         }
+
+         $continuation = new ContinuationImpl(var0) { //2
+            Object result;
+            int label;
+
+            @Nullable
+            public final Object invokeSuspend(@NotNull Object $result) { //4
+               this.result = $result;
+               this.label |= Integer.MIN_VALUE;
+               return MyCoroutineKt.fetchData(this);
+            }
+         };
+      }
+
+      Object $result = ((<undefinedtype>)$continuation).result;
+      Object var3 = IntrinsicsKt.getCOROUTINE_SUSPENDED();
+      switch (((<undefinedtype>)$continuation).label) {
+         case 0: //3
+            ResultKt.throwOnFailure($result);
+            ((<undefinedtype>)$continuation).label = 1;
+            if (DelayKt.delay(1000L, (Continuation)$continuation) == var3) {
+               return var3;
+            }
+            break;
+         case 1:
+            ResultKt.throwOnFailure($result);
+            break;
+         default:
+            throw new IllegalStateException("call to 'resume' before 'invoke' with coroutine");
+      }
+
+      return "Joe";
+   }
+
+```
+1. 经过编译后，为挂起函数添加Continuation类型的参数，称为续体；
+2. 创建匿名续体对象$continuation，将新增的续体参数保存在属性completion，从它的名称就可知道它的作用就是用来执行完挂起函数后恢复协程的执行。
+3. 当函数被调用时label为0，将$continuation对象传递挂起函数delay，delay也是一个挂起函数，label+1，自身挂起；
+4. 由delay函数调用$continuation的invokeSuspend方法恢复挂起函数执行，执行下一个lable业务；
+
+##### CPS转换
+
+为函数添加一个Continuation类型的参数，用于接受函数执行的结果，在挂起函数恢复后，由续体来决定接下来的操作，作用和handler中的callback类似。比如我们在挂起函数调用delay,实际上是将当前函数在delay之后的逻辑封装成续体，delay执行完，由续体来执行之后的业务。
+
+##### 状态机
+
+将挂起函数转换为一个状态机，每个挂起点对应一个状态，并将状态保存续体中，并通过 `Continuation` 控制恢复，恢复时执行下一个状态的挂起直到函数返回。
+
+### 挂起点
+
+一个真正的挂起函数，不是我们用suspend修饰了一个函数，然后在代码块中加点耗时操作就可以。而是只能调用特定的API或者业务中调用了真正的挂起函数。检查方法就是去查看对应的java代码，如果函数执行时先返回IntrinsicsKt.getCOROUTINE_SUSPENDED() 挂起等待恢复，才是真正的挂起函数。
+
+## 结构化并发
+通过层级化作用域和父子关系来管理协程生命周期的机制，确保协程的正常的正常的完成，取消和清理，确保资源安全、避免泄漏，并简化异步代码的编写与维护；
+### 协程作用域（CoroutineScope)
+定义协程运行的上下文环境，包含 `Job` 和 `CoroutineDispatcher`。
+### 协程任务（Job）
+表示一个协程任务，支持取消和层级管理。
+## CoroutineScope
+### 常见作用域
+  1. GlobalScope：全局作用域（慎用，生命周期与应用一致，易泄漏）。
+  2. viewModelScope：与 ViewModel 绑定，当 ViewModel 销毁时自动取消。
+  3. lifecycleScope：与 Lifecycle 组件（如 Activity/Fragment）绑定。
+  4. 自定义作用域：通过 `CoroutineScope(SupervisorJob() + Dispatchers.IO)` 创建。
 
 ## SuperVisorJob/supervisorJobScope
 
@@ -723,19 +708,9 @@ public operator fun plus(context: CoroutineContext): CoroutineContext =
 3. `plus`方法的调用方没有`Dispatcher`相关的Element：`CoroutineName("c1") + Job()`结果:`CoroutineName("c1") <- Job`。头插法被plus的(`Job`)放在链表头部
 4. `plus`方法的调用方只有`Dispatcher`相关的`Element` ：`Dispatchers.Main + Job()`结果:`Job <- Dispatchers.Main`。虽然是头插法，但是`ContinuationInterceptor`必须在链表头部。
 5. `plus`方法的调用方是包含`Dispatcher`相关Element的链表： `Dispatchers.Main + Job() + CoroutineName("c5")`结果:`Job <- CoroutineName("c5") <- Dispatchers.Main`。Dispatchers.Main在链表头部，其它的采用头插法。
-### 协程的取消
-1. yield  /isActive /ensureActive
-2. 取消之后 资源无法释放：
-	- try catch  cancel异常的处理；
-	- use函数释放
-3. 子协程取消（内部会抛出JobCancllationException），不会影响父协程的工作
-### 协程的超时任务
-### 协程的异常处理
-异常会传递给父协程
+## Job
 
-# Job
-
-## 简介
+### 简介
 
 ```kotlin
 public interface Job : CoroutineContext.Element {
@@ -743,9 +718,9 @@ public interface Job : CoroutineContext.Element {
 }
 ```
 
-Job是CoroutineContext集合的重要组成元素，Key类型为Job;
+Job是CoroutineContext集合的重要组成元素，Key类型为Job，表示一个协程任务，支持取消和层级管理。
 
-## Job的生命周期
+### Job的生命周期
 
 ![image.png](https://p1-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/e7743d8628b64065b3d8248f26e01350~tplv-k3u1fbpfcp-zoom-in-crop-mark:1512:0:0:0.awebp?)
 
@@ -753,7 +728,7 @@ Job是CoroutineContext集合的重要组成元素，Key类型为Job;
 private val _state = atomic<Any?>(if (active) EMPTY_ACTIVE else EMPTY_NEW)
 ```
 
-## initParentJob
+### initParentJob
 
 ``` kotlin
 //AbstractCoroutine
@@ -806,7 +781,7 @@ private fun startInternal(state: Any?): Int {
    1. start：父Job不为空，启动父Job， 将state设置为 EMPTY_ACTIVE 或 NodeList；
    2. attachChild：将父子Job进行关联；
 
-## attachChild
+### attachChild
 
 ``` kotlin
 
@@ -889,7 +864,7 @@ private fun promoteSingleToNodeList(state: JobNode) {
       1. state.list == null，创建NodeList，并将state设置为NodeList；
       2. state.list !=null，执行tryAdd逻辑，将子Job加入到list中；
 
-## cancle
+### cancle
 
 ``` kotlin
 public override fun cancel(cause: CancellationException?) {
@@ -924,7 +899,7 @@ internal fun cancelImpl(cause: Any?): Boolean {
 
 onCancelComplete 默认为false，JobImpl  和 CompletableDeferredImpl重写为true
 
-### makeCancelling
+#### makeCancelling
 
 ``` kotlin
 private fun makeCancelling(cause: Any?): Any? {
@@ -965,7 +940,7 @@ private fun makeCancelling(cause: Any?): Any? {
 
 ```
 
-### tryMakeCancelling
+#### tryMakeCancelling
 
 ````kotlin
 private fun tryMakeCancelling(state: Incomplete, rootCause: Throwable): Boolean {
@@ -1029,7 +1004,7 @@ override fun childCancelled(cause: Throwable): Boolean = job.childCancelled(caus
    3. cancelParent：通知父Job，子Job正在取消；
 
 
-## makeCompletingOnce
+#### makeCompletingOnce
 
 ``` kotlin
 //BaseContinuationImpl
@@ -1069,7 +1044,7 @@ public final override fun resumeWith(result: Result<T>) {
 
 10. CoroutineScope.launch的block函数参数为CoroutineScope的扩展函数，传入的scope为AbstractCoroutine，当协程体内业务处理完成，执行completion也就是AbstractCoroutine的resumeWith方法。
 
-### makeCompletingOnce
+#### makeCompletingOnce
 
 ``` kotlin
 // JobSupport 857
@@ -1101,7 +1076,7 @@ internal fun makeCompletingOnce(proposedUpdate: Any?): Any? {
     }
 ```
 
-### tryMakeCompletingSlowPath
+#### tryMakeCompletingSlowPath
 
 ``` kotlin
 private fun tryMakeCompletingSlowPath(state: Incomplete, proposedUpdate: Any?): Any? {

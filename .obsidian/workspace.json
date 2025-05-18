@@ -13,26 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Android/简历.md",
+                "file": "2025-W21.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "简历"
-            }
-          },
-          {
-            "id": "b551b711fe8592fd",
-            "type": "leaf",
-            "state": {
-              "type": "markdown",
-              "state": {
-                "file": "面试草稿.md",
-                "mode": "source",
-                "source": false
-              },
-              "icon": "lucide-file",
-              "title": "面试草稿"
+              "title": "2025-W21"
             }
           },
           {
@@ -49,8 +35,7 @@
               "title": "简历"
             }
           }
-        ],
-        "currentTab": 1
+        ]
       }
     ],
     "direction": "vertical"
@@ -169,13 +154,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "面试草稿.md",
+                "file": "2025-W21.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "面试草稿 的大纲"
+              "title": "2025-W21 的大纲"
             }
           },
           {
@@ -189,7 +174,7 @@
             }
           }
         ],
-        "currentTab": 3
+        "currentTab": 4
       }
     ],
     "direction": "horizontal",
@@ -205,47 +190,48 @@
       "command-palette:打开命令面板": false
     }
   },
-  "active": "b551b711fe8592fd",
+  "active": "30be18390afa91ee",
   "lastOpenFiles": [
-    "Android/简历.md",
     "面试草稿.md",
-    "Android/开源框架/OkHttp.md",
-    "Android/开源框架/MMKV.md",
+    "随笔.md",
+    "2025-W19：面试诺见.md",
+    "英语学习/演讲/林肯葛底斯堡.pdf",
+    "英语学习/英语老师Lee/Lee401~450.md",
+    "英语学习/英语老师Lee/Lee451~500.md",
+    "英语学习/9000句.md",
+    "英语学习/绝望的主妇S1.md",
+    "英语学习/Moden Family 06.md",
+    "英语学习/纸牌屋01.md",
+    "英语学习/语境口语.md",
+    "英语学习/语法总结.md",
+    "2025-W21.md",
+    "5.1复习计划.md",
+    "Android/Kotlin.md",
+    "Android/简历.md",
+    "Android/Kotlin基础知识.md",
+    "Android/Launcher之动画.md",
+    "Android/Java.md",
+    "Android/开源框架之MMKV.md",
+    "Android/NDK/NDK之C++.md",
+    "Android/开源框架之插件化换肤.md",
+    "Android/开源框架之插件化.md",
+    "Android/plantUML/未命名.md",
+    "Android/文档图片/lunch相关类图.png",
+    "Android/文档图片/协程Job的生命周期.webp",
     "Android/开源框架/金狮.md",
     "Android/开源框架/插件化.md",
-    "Android/开源框架之插件化.md",
-    "Android/其他.md",
-    "5.1复习计划.md",
-    "Android/DS面试题.md",
-    "Android/面试题回忆.md",
-    "2025-W19.md",
-    "2025-W18：Android完成.md",
-    "Android/Kotlin 协程.md",
-    "Android/java与Kotlin/JVM的内存管理与垃圾回收.md",
-    "Android/Kotlin基础知识.md",
-    "英语学习/Moden Family 06.md",
-    "图片/Moden Family 06.md",
-    "Android/架构设计.md",
-    "Android/开源框架之okhttp.md",
-    "2025-W17 Android完成.md",
-    "2025-W16：Android完成.md",
-    "Android/Jetpack组件.md",
-    "Android/Untitled.md",
-    "Untitled.md",
-    "英语学习/语境口语.md",
+    "Android/开源框架/OkHttp.md",
     "图片/556.jpg",
     "图片/556",
     "图片/556.crdownload",
     "图片/552.jpg",
     "图片/552.jpg.crdownload",
-    "Android/文档图片/lunch相关类图.png",
     "未命名",
     "图片/n的发音现象.png",
     "英语学习/新闻",
     "英语学习/演讲/温故而知新/温故而知新02-1.mp3",
     "英语学习/演讲/温故而知新/1.mp3",
     "英语学习/演讲/温故而知新/温故而知新02-11.mp3",
-    "英语学习/演讲/温故而知新/温故而知新02-10.mp3",
-    "英语学习/演讲/温故而知新/温故而知新02-9.mp3"
+    "英语学习/演讲/温故而知新/温故而知新02-10.mp3"
   ]
 }
