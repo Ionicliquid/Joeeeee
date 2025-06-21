@@ -1,7 +1,24 @@
-# 协程
-## launch流程分析：如何启动一个协程
+# kotlin语法糖
 
-### launch
+运行在JVM上的kotlin可以简单理解为是Java的语法糖，如果不能理解kotlin代码，可以查看对应的Java代码`Tools -> Koltin -> Show Kotlin ByteCode`
+
+## invoke
+
+## inline noinline crossinline
+
+## 扩展函数
+
+## 操作符重载
+
+## 伴生对象
+
+## 函数对象
+
+# 启动一个协程
+
+启动协程的方式有3种
+
+## launch
 
 ```kotlin
 fun main() {
@@ -230,7 +247,7 @@ public final override fun resumeWith(result: Result<Any?>) {
 
 到这里我们发现，我们说launch方法，启动了一个协程，实际上就是创建一个续体，作为所有挂起函数调用的起点；
 
-### delay
+## delay
 
 #### delay
 
@@ -370,7 +387,7 @@ override fun processNextEvent(): Long {
     }
 ```
 
-### async
+## async
 
 ```kotlin
 public fun <T> CoroutineScope.async(
@@ -399,7 +416,7 @@ private open class DeferredCoroutine<T>(
 
 1. 与launch方法一样，async也可以启动一个协程，但async返回Deferred；
 
-### await
+#### await
 
 ```kotlin
 protected suspend fun awaitInternal(): Any? {
@@ -424,9 +441,12 @@ private suspend fun awaitSuspend(): Any? = suspendCoroutineUninterceptedOrReturn
     }
 ```
 
-## 挂起与恢复
+# 挂起与恢复
+
 线程A挂起，等待线程B的执行，线程B执行完成，通知线程A恢复执行；挂起分为阻塞时挂起与非阻塞式挂起。
-### 阻塞式
+
+## 阻塞式
+
 `join`实现
 
 ```java
@@ -449,7 +469,8 @@ public void blockSuspend() {
     }
 ```
 
-### 非阻塞式
+## 非阻塞式
+
 在`Android`中通过`Handler`消息机制实现
 
 ```kotlin
@@ -459,7 +480,7 @@ thread {
 }.start()
 ```
 
-### 协程式
+## 协程式
 
 在协程作用域内，用阻塞式的代码风格实现非阻塞式的挂起与恢复。
 
@@ -485,8 +506,9 @@ suspend fun fetchData():String{
 
 用delay模拟在子线程中获取数据，又恢复到主线程中执行；
 
-### 挂起函数
-用suspend修饰的函数，称为挂起函数。挂起函数只能在挂起函数内调用。
+## 挂起函数
+
+用suspend修饰的函数，称为挂起函数。挂起函数只能在挂起函数内调用，第一个挂起函数就是协程体。
 
 #### 实现原理
 
@@ -499,8 +521,6 @@ suspend fun fetchData():String{
 }
 ```
 对应的Java代码
-
-> Tools -> Koltin -> Show Kotlin ByteCode
 
 ```java
  @Nullable
@@ -566,7 +586,8 @@ suspend fun fetchData():String{
 
 一个真正的挂起函数，不是我们用suspend修饰了一个函数，然后在代码块中加点耗时操作就可以。而是只能调用特定的API或者业务中调用了真正的挂起函数。检查方法就是去查看对应的java代码，如果函数执行时先返回IntrinsicsKt.getCOROUTINE_SUSPENDED() 挂起等待恢复，才是真正的挂起函数。
 
-## 结构化并发
+# 结构化并发
+
 通过层级化作用域和父子关系来管理协程生命周期的机制，确保协程的正常的正常的完成，取消和清理，确保资源安全、避免泄漏，并简化异步代码的编写与维护；
 ### 协程作用域（CoroutineScope)
 定义协程运行的上下文环境，包含 `Job` 和 `CoroutineDispatcher`。
@@ -653,8 +674,6 @@ public fun CoroutineContext.cancel(cause: CancellationException? = null) {
 
 # CoroutineContext
 
-## 简介
-
 保存协程上下文的自定义集合，主要由以下4个`Element`组成：
 - `Job`：协程的唯一标识，用来控制协程的生命周期(`new、active、completing、completed、cancelling、cancelled`)；
 - `CoroutineDispatcher`：协程调度器，指定协程运行的线程(`IO、Default、Main、Unconfined`);
@@ -708,7 +727,10 @@ public operator fun plus(context: CoroutineContext): CoroutineContext =
 3. `plus`方法的调用方没有`Dispatcher`相关的Element：`CoroutineName("c1") + Job()`结果:`CoroutineName("c1") <- Job`。头插法被plus的(`Job`)放在链表头部
 4. `plus`方法的调用方只有`Dispatcher`相关的`Element` ：`Dispatchers.Main + Job()`结果:`Job <- Dispatchers.Main`。虽然是头插法，但是`ContinuationInterceptor`必须在链表头部。
 5. `plus`方法的调用方是包含`Dispatcher`相关Element的链表： `Dispatchers.Main + Job() + CoroutineName("c5")`结果:`Job <- CoroutineName("c5") <- Dispatchers.Main`。Dispatchers.Main在链表头部，其它的采用头插法。
-## Job
+
+# Continuation
+
+# Job
 
 ### 简介
 
