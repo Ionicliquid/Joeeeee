@@ -165,8 +165,22 @@ Image( painter = painterResource(id = R.drawable.ic_launcher_foreground), conten
 - `modifier`：用于控制图片的大小、形状等样式。
 ### Column & Row 组件（布局容器）
 ```kotlin
-Column( verticalArrangement = Arrangement.spacedBy(10.dp), horizontalAlignment = Alignment.CenterHorizontally ) { Text("Item 1") Text("Item 2") Text("Item 3") } Row( horizontalArrangement = Arrangement.spacedBy(15.dp), verticalAlignment = Alignment.CenterVertically ) { Text("Left") Text("Right") }
+Column(
+    verticalArrangement = Arrangement.spacedBy(10.dp),
+    horizontalAlignment = Alignment.CenterHorizontally
+) {
+    Text("Item 1")
+    Text("Item 2")
+    Text("Item 3")
+}
 
+Row(
+    horizontalArrangement = Arrangement.spacedBy(15.dp),
+    verticalAlignment = Alignment.CenterVertically
+) {
+    Text("Left")
+    Text("Right")
+}
 ```
 - `verticalArrangement`：设置竖直方向的排列方式。
 - `horizontalArrangement`：设置水平方向的排列方式。
@@ -174,7 +188,16 @@ Column( verticalArrangement = Arrangement.spacedBy(10.dp), horizontalAlignment =
 ### Box组件
 `Box` 组件用于重叠视图，通常用于显示叠加元素。通过 `Modifier.align()` 可以精确控制子组件的位置。
 ``` kotlin
-Box( modifier = Modifier.size(100.dp).background(Color.Gray) ) { Text( text = "Overlay Text", modifier = Modifier.align(Alignment.Center), color = Color.White ) }
+Box(
+    modifier = Modifier.size(100.dp).background(Color.Gray)
+) {
+    Text(
+        text = "Overlay Text",
+        modifier = Modifier.align(Alignment.Center),
+        color = Color.White
+    )
+}
+
 
 ```
 - `modifier`：设置 `Box` 组件的样式，例如大小、背景色。
