@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "0721- 11周面试计划.md",
+                "file": "随笔.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "0721- 11周面试计划"
+              "title": "随笔"
             }
           }
         ]
@@ -140,13 +140,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "0721- 11周面试计划.md",
+                "file": "随笔.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "0721- 11周面试计划 的大纲"
+              "title": "随笔 的大纲"
             }
           },
           {
@@ -178,18 +178,21 @@
   },
   "active": "c3760bdfcba4ef19",
   "lastOpenFiles": [
-    "2025-W31.md",
-    "2025年计划/2025-W30：失败.md",
+    "总结.md",
     "复习准备.md",
+    "随笔.md",
+    "2025-W32.md",
+    "其他.md",
     "Kotlin MultiPlatform.md",
-    "0721- 11周面试计划.md",
-    "Android/开源框架之Rxjava.md",
+    "2025-W31：失败.md",
+    "0903- 10周面试计划.md",
     "食谱.md",
+    "2025年计划/2025-W30：失败.md",
+    "Android/开源框架之Rxjava.md",
     "Android/简历.md",
     "英语学习/英语老师Lee/Daily.md",
     "学习技巧/我如何实现一个又一个看似遥不可及的目标？你也可以！.md",
     "学习技巧/如何做到长期坚持并实现你的目标？.md",
-    "总结.md",
     "Android/文档图片/mvc_mvp_mvvm.png",
     "Android/文档图片/mvc_mvp_mvvm.png.crdownload",
     "2025年计划/2025-W29.md",
@@ -199,7 +202,6 @@
     "学习技巧/费曼学习法.md",
     "640.webp",
     "2025年计划",
-    "随笔.md",
     "学习技巧",
     "4.md",
     "2025年计划/2025-W28：完成.md",
@@ -211,8 +213,6 @@
     "英语学习/演讲/乔布斯斯坦福.md",
     "英语学习/演讲/林肯葛底斯堡.md",
     "1.md",
-    "英语学习/英语老师Lee/如何练习英语口语.md",
-    "其他.md",
     "英语学习/演讲/乔布斯斯坦福.pdf",
     "英语学习/演讲/林肯葛底斯堡.pdf",
     "Android/文档图片/kmp/MVI.webp",

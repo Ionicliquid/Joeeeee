@@ -1,64 +1,753 @@
-# 背景
-## Compose的区别
-![[jetpack与multi.png]]
+# KMP源码
+## 背景
 
-## 代码的复用
-![[跨平台代码的复用.png]]
-## 流程图
-![[流程图.png]]
-## 核心类
-![[核心类.png]]
+KMP 中以 Compose 为基础来构建跨平台复用的 UI，Compose 是响应式 UI 体系，Compose 是如何封装状态管理驱动 UI 刷新渲染的呢？本文简要介绍 Compose 源码的核心思想和架构，以便对 KMP 跨平台的设计思路和演进路线提供一些知识储备。
+起源 (Android Compose): Compose 最初是 Google 发起的一个项目，旨在彻底革新 Android 的 UI 开发模式，对标 Flutter 和 SwiftUI 的声明式范式。在这个阶段，大家普遍称之为 “Android Compose”，因为它完全是为了 Android 平台而生。
+官方品牌 (Jetpack Compose): 随着项目成熟并准备正式发布，Google 将其纳入了 Android Jetpack 库套件中。Jetpack 是一系列旨在帮助开发者遵循最佳实践、减少样板代码并编写在不同 Android 版本和设备上表现一致的代码的库。因此，官方名称正式定为  “Jetpack Compose” ，强调了它作为 Android 官方推荐的现代 UI 工具包的地位。
+走向跨平台 (Compose Multiplatform): Compose 的核心模块（如 runtime, compiler, ui）从设计之初就具有良好的平台无关性。JetBrains（Kotlin 语言的创造者）看到了这一点，并基于这个核心，扩展开发了支持其他平台的版本，这就是  “Compose Multiplatform” (CMP) 。它复用了 Jetpack Compose 的核心，但为其添加了桌面 (Desktop)、iOS 和 Web 的渲染后端。
 
-# 什么是Compose
+  
 
-## 命令式 VS 声明式
-### 声明式
-1. 简化状态管理：UI是状态的直接映射
-2. 代码简洁
-3. 可预测性强:给定相同的状态，总能得到相同的UI，便于调试和测试
-4. 跨平台友好
-## MVI
+![图片](https://mmbiz.qpic.cn/sz_mmbiz_png/RibZ8KwAStDNVbP5mkH9TKLec54rCM35vPzQMNwryr9YC2XwibVK2zEbpibFkqOBFicCCRG3QT7DDeHcBUB1iaibHBow/640?from=appmsg&randomid=yyfddaln&tp=webp&wxfrom=5&wx_lazy=1)
 
-![[MVI.webp]]
-### 核心思想：构建一个完全封闭和可预测的数据循环。
-	1. Model: 表示UI的状态（State），是唯一的数据源。
-	2. View: Composable函数，负责渲染State，并将用户操作转化为意图（Intent）。
-	3. Intent: 用户的操作意图（如点击按钮、输入文本），它不会直接修改状态。
-### 数据流
-1. View 发出 Intent (例如，调用 viewModel.onButtonClick())
-2. ViewModel 接收 Intent，处理业务逻辑。    
-3. ViewModel 基于逻辑处理结果，生成一个 全新的State 。
-4. View 订阅 State 的变化，当新State到达时，Compose框架自动触发重组，UI更新。
+具体看两者差异：
 
-### 优点
-- 极度可预测：数据永远单向流动，状态来源清晰，调试非常方便。
-- 唯一数据源：整个UI只依赖一个State对象，状态一致性得到保证。
-- 易于测试：可以独立测试ViewModel的逻辑：给定一个初始State和一个Intent，断言最终的State是否符合预期。
-### 缺点
-- 模板代码较多：对于简单页面，需要定义State、Event/Intent等，可能感觉有些繁琐。
+![图片](https://mmbiz.qpic.cn/sz_mmbiz_png/RibZ8KwAStDNVbP5mkH9TKLec54rCM35vAnicYsg9x7XCztp63H3uMHpXd4Tib5S6qLRCgpR62fXKRYpEia4r9rCIA/640?wx_fmt=png&from=appmsg&randomid=mkc90tc2&tp=webp&wxfrom=5&wx_lazy=1)
 
-# 代码架构
-## 状态管理
-### UI的组织方式
+KMP 如何解决代码复用问题
+
+![图片](https://mmbiz.qpic.cn/sz_mmbiz_png/RibZ8KwAStDNVbP5mkH9TKLec54rCM35vpaj9nwVicGmh0yk3WGpicoJJRgItGYXWDtwgEhmbicGvOyxxaON6JLqgA/640?from=appmsg&randomid=kcksdvz8&tp=webp&wxfrom=5&wx_lazy=1)
+KMP 生态在不断完善
+
+![图片](https://mmbiz.qpic.cn/sz_mmbiz_png/RibZ8KwAStDNVbP5mkH9TKLec54rCM35vzlbgibSTZWfb0qJtep14VmXGfd2D3JlaxFrda5e5YeFZDVGrap6X6ZA/640?from=appmsg&randomid=m2yvriq9&tp=webp&wxfrom=5&wx_lazy=1)
+
+
+## 概览
+
+### 1 流程介绍
+
+整体上 Compose 主要包含了几个重要的过程：组合和重组、状态管理、UI 构建、绘制
+
+![图片](https://mmbiz.qpic.cn/sz_mmbiz_png/RibZ8KwAStDNVbP5mkH9TKLec54rCM35vbb3BWicby1mpLt7aO0uHbgibz81ib2LKGymdvkPYeatkjWUuToOT85ftw/640?wx_fmt=png&from=appmsg&randomid=ws5jfy9u&tp=webp&wxfrom=5&wx_lazy=1)
+
+具体核心过程涉及到的源码位置：
+
+![图片](https://mmbiz.qpic.cn/sz_mmbiz_png/RibZ8KwAStDNVbP5mkH9TKLec54rCM35vQRuSG9WE58U9cquKPsNr6OU69nPDsgm3UlNjNibn0e5xD3dVDyOYDoQ/640?wx_fmt=png&from=appmsg&randomid=ba1jyb82&tp=webp&wxfrom=5&wx_lazy=1)
+
+  
+
+UI 布局代码以一个计数器例子来举例说明每一帧绘制流程，从点击 +，触发 State value++ 开始
+
+![图片](https://mmbiz.qpic.cn/sz_mmbiz_png/RibZ8KwAStDNVbP5mkH9TKLec54rCM35vInJCaoCia8NE6e9UHU3Gib6LhGSkVPGicic4icqyAa3pgPiaarJWhDqKx7CA/640?from=appmsg&randomid=ijazgqkm&tp=webp&wxfrom=5&wx_lazy=1)
+
+  
+
+绘制的核心流程：重组-> 布局 -> 绘制
+
+![图片](https://mmbiz.qpic.cn/sz_mmbiz_png/RibZ8KwAStDNVbP5mkH9TKLec54rCM35v5aJGRYymmZ42JkTU0xgoDXIEFnV9ynP4BJmcib3njIzERTboh3Gxxew/640?from=appmsg&randomid=jwjqvfil&tp=webp&wxfrom=5&wx_lazy=1)
+
+  
+
+### 2 代码架构
+
+整体的源码类图结构：
+- 状态管理
+- 重组
+- 布局和绘制
+    
+
+![图片](https://mmbiz.qpic.cn/sz_mmbiz_png/RibZ8KwAStDNVbP5mkH9TKLec54rCM35v5Xia1GFPyS6sTqhyOxneKLuHZZM4jia8M6tiazspIpwh0KLPC1vFPebrQ/640?from=appmsg&randomid=q5oceyvt&tp=webp&wxfrom=5&wx_lazy=1)
+
+  
+
+其中状态管理相关的类结构：
+
+![图片](https://mmbiz.qpic.cn/sz_mmbiz_png/RibZ8KwAStDNVbP5mkH9TKLec54rCM35vMbZdg3kvhic6EnAsty8s1ccMzg1kLPjUD80qbFRe9vicvyABeOPLpibFQ/640?from=appmsg&randomid=fuo0tdt6&tp=webp&wxfrom=5&wx_lazy=1)
+
+  
+
+重组触发流程的类结构：
+
+![图片](https://mmbiz.qpic.cn/sz_mmbiz_png/RibZ8KwAStDNVbP5mkH9TKLec54rCM35vUMOqy2LDB96TVg21reWNJouaZcrYfKIyh1OibGAvN5hdQfuagavIOjA/640?from=appmsg&randomid=cmerjf2z&tp=webp&wxfrom=5&wx_lazy=1)
+
+  
+
+布局和绘制的类结构：
+
+![图片](https://mmbiz.qpic.cn/sz_mmbiz_png/RibZ8KwAStDNVbP5mkH9TKLec54rCM35vohjSpuKKoicqHqp09yJzhb8MPTWWCLxRGd0mkgygAIH1xC7cPmjf8xQ/640?from=appmsg&randomid=96ff2sx6&tp=webp&wxfrom=5&wx_lazy=1)
+
+  
+
+## 编译
+
+编译阶段目标是方便状态管理，将 UI 组合函数中植入一些串联管理组合函数的角色，方便进行 UI 构建和状态管理。
+开发阶段代码：
+``` kotlin
+@Composable  
+fun ConditionalUI(showProfile: Boolean) {  
+    Column {  
+        Text("Header")  
+        if (showProfile) {  
+            ProfileView() // 分支 A  
+        } else {  
+            LoginPrompt() // 分支 B  
+        }  
+        Text("Footer")  
+    }  
+}
+```
+
+
+编译之后伪代码：
+
+```kotlin
+fun ConditionalUI(showProfile: Boolean, $composer: Composer, $changed: Int) {  
+    // 1. 开始一个可重组的作用域 (Restart Group)  
+    //    这使得 ConditionalUI 自身可以被单独重组  
+    $composer.startRestartGroup(12345) // 12345 是一个编译器生成的唯一键  
+  
+    // 检查参数是否有变化，这是智能重组和跳过的关键  
+    // (这是一个简化的逻辑)  
+    val dirty = $changed  
+    if (dirty and0b1011 == 0b0010 && $composer.skipping) {  
+        $composer.skipToGroupEnd() // 如果参数未变且父级在跳过，则直接跳过整个函数  
+    } else {  
+        // 2. 调用 Column Composable  
+        //    注意，$composer 和 $changed 参数会被传递下去  
+        Column(modifier = ..., $composer, $changed, ...) {  
+  
+            // 3. 调用 Text("Header")  
+            //    由于 "Header" 是一个常量，编译器会标记它为静态，进一步优化  
+            Text("Header", $composer, 0b0110)  
+  
+            // 4. 【核心】处理 if/else 控制流  
+            //    编译器为 if 语句创建一个匿名组  
+            $composer.startGroup(67890) // 67890 是 if 语句的唯一键  
+            if (showProfile) {  
+                // 5. 为 if 的 true 分支创建一个组  
+                $composer.startGroup(22222)  
+                ProfileView($composer, 0)  
+                $composer.endGroup()  
+            } else {  
+                // 6. 为 if 的 false 分支创建一个组  
+                $composer.startGroup(33333)  
+                LoginPrompt($composer, 0)  
+                $composer.endGroup()  
+            }  
+            $composer.endGroup() // 结束 if 语句的组  
+  
+            // 7. 调用 Text("Footer")  
+            Text("Footer", $composer, 0b0110)  
+        }  
+    }  
+  
+    // 8. 结束可重组作用域，并提供一个用于重组的 lambda  
+    val scope = $composer.endRestartGroup()  
+    scope?.updateScope { nextComposer, force ->  
+        // 当需要重组时，这个 lambda 会被调用  
+        ConditionalUI(showProfile, nextComposer, $changed or0b1)  
+    }  
+}
+
+```
+
+  
+
+主要工作如下：
+
+- Composer 编译器会在 Compose 函数中增加 Composer 和 changed 参数，方便 Composer 来管理所有的 UI 层级和状态，Composer 会将这些信息写入 SlotTable
+- Key 的生成与作用：composer.startRestartGroup(key) 中的 key 至关重要。编译器会根据 Composable 在源码中的 位置 （行号、列号）生成一个在当前父函数中唯一的、稳定的整数 Key。当 if/else 或 when 导致某个 Composable 在下一次重组中“消失”时，Composer 正是依靠这个 Key 来识别出“哪个组不见了”，从而高效地从 SlotTable 中移除对应的节点，而不需要进行复杂的树比对。
+- $stable  标记 ：编译器会进行深入的类型分析。如果一个类的所有公共属性都是 val 且类型也是稳定的（基本类型、String、或也标记为 @Stable/@Immutable 的类），编译器会自动将其标记为“稳定”。在计算 changed 位图时，如果一个参数是稳定的且其实例引用没有变（===），Compose 就可以假定其内容也没有变，从而获得一个巨大的性能优化—— 直接跳过对该参数的深入比对 。
+- Lambda 的“记住”与重写：对于 Composable 中的 Lambda 表达式，尤其是事件回调（如 onClick），编译器会特殊处理。它会隐式地将 Lambda 包裹在一个 remember 调用中，并捕获其依赖的变量。例如：
+``` kotlin
+    var name by remember { mutableStateOf("World") }Button(onClick = { println("Hello, $name") }) { /*...*/ }
+```
+    onClick 这个 Lambda 依赖于 name。编译器会生成类似这样的代码：
+``` kotlin 
+// 伪代码
+val onClickLambda = remember(name) { { println("Hello, $name") } }  
+Button(onClick = onClickLambda, ...)
+```
+ 这意味着，只有当 name 发生变化时，才会重新创建一个新的 Lambda 实例。如果 name 不变，Button 在重组时会收到一个完全相同的 Lambda 实例。由于 Function 类型在 Compose 中被认为是稳定的，这使得 Button 可以跳过重组，因为它所有的参数都没有变化。
+
+## 状态管理 
+
+### 1 UI 组织方式
+
 Compose 中 UI 结构构建十分高效将 UI 树压平到一个数组结构 SlotTable 中，其中通过一个数组 slots 完成所有 UI 相关信息的存储，通过一个 groups 数组完成所有的 UI 区块的位置范围。
-- groups  数组是导航地图 ：Composer 依靠 groups 数组来理解代码的结构，特别是像 if-else 这样的条件分支。它知道上次走的是哪条路。   
+- groups  数组是导航地图 ：Composer 依靠 groups 数组来理解代码的结构，特别是像 if-else 这样的条件分支。它知道上次走的是哪条路。
 - slots  数组是数据仓库 ：所有真实的数据都在这里。当分支切换时，旧分支的数据被移除，新分支的数据被添加。
+这样随着 compose 函数的执行就可以通过 groups 的索引机制进行 UI 的构建或者重组，或者执行 UI 的刷新。
 
-### 状态管理
+  
+
+![图片](https://mmbiz.qpic.cn/sz_mmbiz_png/RibZ8KwAStDNVbP5mkH9TKLec54rCM35vAV6EPADTnBd7jA7J48AiaFiaKicOApF68ia9W9Pmn1CdFEuUYn1cUCczRQ/640?from=appmsg&randomid=avjoegrz&tp=webp&wxfrom=5&wx_lazy=1)
+
+  
+
+布局代码
+
+```
+@Composablefun AuthScreen() {    var showLogin by remember { mutableStateOf(true) }    Column {        if (showLogin) {            Button(onClick = { showLogin = false }) {                Text("Login")            }        } else {            Button(onClick = { showLogin = true }) {                Text("Logout")            }        }        Text("Welcome to the App!")    }}
+```
+
+  
+
+SlotTable
+
+```
+// groups 数组记录了结构groups: [AuthScreen, Column, IF_GROUP, Button, Text, Text]                                  ^-- 标记这里是 if// slots 数组存储了实际数据slots: [state(true), LNode(Col), onClick, LNode(Btn), "Login", LNode(Txt), "Welcome...", LNode(Txt)]
+```
+
+  
+
+UI 树
+
+```
+LayoutNode(Column)  ├── LayoutNode(Button)  │   └── LayoutNode(Text, text="Login")  └── LayoutNode(Text, text="Welcome to the App!")
+```
+
+  
+
+A SlotTable
+
+为了实现高效的插入和删除，SlotTable 的底层数组实际上使用了一种源自文本编辑器的优化技术—— Gap Buffer 。
+
+  
+
+- 工作原理：想象一个巨大的数组，Composer 的当前插入点就像文本光标。当需要在光标处插入新内容时，它不是移动光标之后的所有数据，而是在光标位置创建一个“间隙”（Gap）。插入操作就在这个间隙中进行。当光标需要移动时，只需要移动间隙两端的数据来“填充”旧的间隙，并在新位置创建间隙。对于连续的 Composable 调用，光标（即 Composer 的内部指针）顺序移动，插入效率极高。
+    
+- 优势：这种机制使得在 SlotTable 中间插入或删除一组节点（例如，if 条件从 false 变为 true）的成本，与这组节点的数量成正比，而与 SlotTable 的总大小无关。这是 Compose 能够高效处理动态 UI（如长列表）的基石之一。
+    
+
+  
+
+Gap 的设置使得 UI 变化区域存在一段空间，可以使得插入或者删除 UI 节点变得非常高效，无需移动整个数组即可完成，比如在 A B GAP GAP C D 中插入 X，只需要将 GAP 起始点位置插入 X 即可。
+
+![图片](https://mmbiz.qpic.cn/sz_mmbiz_png/RibZ8KwAStDNVbP5mkH9TKLec54rCM35vOeRgdMhmxeFhGsINdxWu1SVEukrGQXycTPP3jjA1jZKfAnqX5LnO8w/640?from=appmsg&randomid=e1509hj0&tp=webp&wxfrom=5&wx_lazy=1)
+
+  
+
+### 2 状态管理
+
 整个 UI 状态管理机制由如下重要角色构成
 - Recomposer：项目总调度/发动机
 - Composition  (  CompositionImpl )：整个建筑工程/UI 树实例
 - Composer  (  ComposerImpl )：具体的建筑工人/UI 描述翻译器
 - Composable 函数：建筑指令/UI 蓝图片段
-## 重组
-## 布局与绘制
+State  改变 → 重组 Composable → 更新   SlotTable   → 精确修改   LayoutNode  树 → 触发重新布局和绘制
 
-# 编译
+  
 
-- Composer 编译器会在 Compose 函数中增加 Composer 和 changed 参数，方便 Composer 来管理所有的 UI 层级和状态，Composer 会将这些信息写入 SlotTable
-- Key 的生成与作用：composer.startRestartGroup(key) 中的 key 至关重要。编译器会根据 Composable 在源码中的 位置 （行号、列号）生成一个在当前父函数中唯一的、稳定的整数 Key。当 if/else 或 when 导致某个 Composable 在下一次重组中“消失”时，Composer 正是依靠这个 Key 来识别出“哪个组不见了”，从而高效地从 SlotTable 中移除对应的节点，而不需要进行复杂的树比对。
-- $stable  标记 ：编译器会进行深入的类型分析。如果一个类的所有公共属性都是 val 且类型也是稳定的（基本类型、String、或也标记为 @Stable/@Immutable 的类），编译器会自动将其标记为“稳定”。在计算 changed 位图时，如果一个参数是稳定的且其实例引用没有变（===），Compose 就可以假定其内容也没有变，从而获得一个巨大的性能优化—— 直接跳过对该参数的深入比对 。
-- Lambda 的“记住”与重写：对于 Composable 中的 Lambda 表达式，尤其是事件回调（如 onClick），编译器会特殊处理。它会隐式地将 Lambda 包裹在一个 remember 调用中，并捕获其依赖的变量。
+![图片](https://mmbiz.qpic.cn/sz_mmbiz_png/RibZ8KwAStDNVbP5mkH9TKLec54rCM35vgoDQ0ntEPNWicg0NmmoicZ4I44tI5wxCWhhZ6iaHk079DDw2LRibW717ibQ/640?from=appmsg&randomid=tfnfbkgd&tp=webp&wxfrom=5&wx_lazy=1)
+
+![图片](https://mmbiz.qpic.cn/sz_mmbiz_png/RibZ8KwAStDNVbP5mkH9TKLec54rCM35vMpWic7Bs4ia3FcBZatjE3lfXhmAfOw28U92jCaVroH7kgKKwsII6nwmg/640?wx_fmt=png&from=appmsg&randomid=n0mbmpqe&tp=webp&wxfrom=5&wx_lazy=1)
+
+![图片](https://mmbiz.qpic.cn/sz_mmbiz_png/RibZ8KwAStDNVbP5mkH9TKLec54rCM35valzIZvvMg03JbIIUWVKRQ3rQQy86qZSWFmaruONjna0ib2bE95nV7ow/640?wx_fmt=png&from=appmsg&randomid=cw029ysq&tp=webp&wxfrom=5&wx_lazy=1)
+整个 Compose 的核心在于状态变量驱动 UI 重组，具体从代码分析流程如下
+#### A 状态修改
+GlobalSnapshotManager 注册全局 UI 刷新事件的监听
+
+``` kotlin
+internal object GlobalSnapshotManager {  
+    private val started = AtomicBoolean(false)  
+  
+    fun ensureStarted() {  
+        if (started.compareAndSet(false, true)) {  
+            val channel = Channel<Unit>(Channel.CONFLATED)  
+            CoroutineScope(AndroidUiDispatcher.Main).launch {  
+            // 状态变量修改后驱动重组和应用  
+                channel.consumeEach {  
+                    Snapshot.sendApplyNotifications()  
+                }  
+            }  
+            // 状态变量的修改  
+            Snapshot.registerGlobalWriteObserver {  
+                channel.trySend(Unit)  
+            }  
+        }  
+    }  
+}
+```
+
+  
+
+状态管理代理状态变量的 Set 和 Get 实现对状态变量读写的监听，SnapshotMutableStateImpl
+
+```kotlin
+internal open class SnapshotMutableStateImpl<T>(  
+    value: T,  
+    override val policy: SnapshotMutationPolicy<T>  
+) : StateObject, SnapshotMutableState<T> {  
+    @Suppress("UNCHECKED_CAST")  
+    override var value: T  
+        get() = next.readable(this).value  
+        set(value) = next.withCurrent {  
+            if (!policy.equivalent(it.value, value)) {  
+                next.overwritable(this, it) { this.value = value }  
+            }  
+        }
+```
+
+```kotlin
+internal inline fun <T : StateRecord, R> T.overwritable(  
+    state: StateObject,  
+    candidate: T,  
+    block: T.() -> R  
+): R {  
+    var snapshot: Snapshot = snapshotInitializer  
+    return sync {  
+        snapshot = Snapshot.current  
+        this.overwritableRecord(state, snapshot, candidate).block()  
+    }.also {  
+        notifyWrite(snapshot, state)  
+    }  
+}
+```
+
+记录状态变量修改，后续通知全局的状态 SnapShot 管理，将这些作为 Changed 传入
+
+``` kotlin
+override fun recordModified(state: StateObject) {  
+    (modified ?: IdentityArraySet<StateObject>().also { modified = it }).add(state)  
+}
+```
+
+Snapshot 通知状态变量修改触发全局的响应状态变量更新的流程
+
+``` kotlin
+internal fun notifyWrite(snapshot: Snapshot, state: StateObject) {  
+    snapshot.writeCount += 1  
+    snapshot.writeObserver?.invoke(state)  
+}
+```
+
+GlobalSnapshotManager
+
+``` kotlin
+Snapshot.registerGlobalWriteObserver {  
+    channel.trySend(Unit)  
+}
+```
+
+``` kotlin
+CoroutineScope(AndroidUiDispatcher.Main).launch {  
+    channel.consumeEach {  
+        Snapshot.sendApplyNotifications()  
+    }  
+}
+```
+
+监测到状态变量修改，Snapshot 更新启动
+
+``` kotlin
+fun sendApplyNotifications() {  
+    val changes = sync {  
+        currentGlobalSnapshot.get().modified?.isNotEmpty() == true  
+    }  
+    if (changes)  
+        advanceGlobalSnapshot()  
+}
+```
+
+SnapshotKt 通知状态观测者 ReComposer 准备开始调度响应状态变量的修改
+
+``` kotlin
+private fun <T> advanceGlobalSnapshot(block: (invalid: SnapshotIdSet) -> T): T {  
+    var previousGlobalSnapshot = snapshotInitializer as GlobalSnapshot  
+  
+    var modified: IdentityArraySet<StateObject>? = null// Effectively val; can be with contracts  
+    val result = sync {  
+        previousGlobalSnapshot = currentGlobalSnapshot.get()  
+        modified = previousGlobalSnapshot.modified  
+        if (modified != null) {  
+            pendingApplyObserverCount.add(1)  
+        }  
+        takeNewGlobalSnapshot(previousGlobalSnapshot, block)  
+    }  
+  
+    // If the previous global snapshot had any modified states then notify the registered apply  
+    // observers.  
+    modified?.let {  
+        try {  
+            val observers: List<(Set<Any>, Snapshot) -> Unit> =  
+                sync { applyObservers.toMutableList() }  
+            observers.fastForEach { observer ->  
+                observer(it, previousGlobalSnapshot)  
+            }  
+        } finally {  
+            pendingApplyObserverCount.add(-1)  
+        }  
+    }  
+  
+    sync {  
+        checkAndOverwriteUnusedRecordsLocked()  
+        modified?.fastForEach { processForUnusedRecordsLocked(it) }  
+    }  
+  
+    return result  
+}
+
+```
+
+Recomposer 开始调度全局工作，状态变量的修改被作为 Changed 传入 于 recordModified 记录修改的状态变量
+
+``` kotlin
+@OptIn(ExperimentalComposeApi::class)  
+private suspend fun recompositionRunner(  
+    block: suspend CoroutineScope.(parentFrameClock: MonotonicFrameClock) -> Unit  
+) {  
+    val parentFrameClock = coroutineContext.monotonicFrameClock  
+    withContext(broadcastFrameClock) {  
+        // Enforce mutual exclusion of callers; register self as current runner  
+        val callingJob = coroutineContext.job  
+        registerRunnerJob(callingJob)  
+  
+        // Observe snapshot changes and propagate them to known composers only from  
+        // this caller's dispatcher, never working with the same composer in parallel.  
+        // unregisterApplyObserver is called as part of the big finally below  
+        val unregisterApplyObserver = Snapshot.registerApplyObserver { changed, _ ->  
+            synchronized(stateLock) {  
+                if (_state.value >= State.Idle) {  
+                    snapshotInvalidations.addAll(changed)  
+                    deriveStateLocked()  
+                } elsenull  
+            }?.resume(Unit)  
+        }  
+  
+        addRunning(recomposerInfo)  
+  
+        try {  
+            // Invalidate all registered composers when we start since we weren't observing  
+            // snapshot changes on their behalf. Assume anything could have changed.  
+            synchronized(stateLock) {  
+                knownCompositions.toMutableList()  
+            }.fastForEach { it.invalidateAll() }  
+  
+            coroutineScope {  
+                block(parentFrameClock)  
+            }  
+        } finally {  
+            unregisterApplyObserver.dispose()  
+            synchronized(stateLock) {  
+                if (runnerJob === callingJob) {  
+                    runnerJob = null  
+                }  
+                deriveStateLocked()  
+            }  
+            removeRunning(recomposerInfo)  
+        }  
+    }  
+}
+```
+#### B 重组
+
+状态变量修改后，已经记录 snapshotInvalidations 后续即可在 Vsync 周期内将 snapshotInvalidations 批量执行状态变量关联的 UI 的更新，这个过程就是重组。
+
+![图片](https://mmbiz.qpic.cn/sz_mmbiz_png/RibZ8KwAStDNVbP5mkH9TKLec54rCM35vYT0hyFkB8LiaGkmA2MQ3hVauYPhxHmJJslhNF71OHIR3zsOVGAmiaDXg/640?from=appmsg&randomid=hjk6h1yj&tp=webp&wxfrom=5&wx_lazy=1)
+
+  
+
+- 重组的本质：当状态（State）改变时，Recomposer 会调度受该状态影响的 Composable 函数重新执行。这个过程就是“重组”。
+    
+- SlotTable  的角色 ：重组的主要产物是 更新   SlotTable 。Composer 会将 Composable 函数的新执行结果与 SlotTable 中记录的旧结果进行比较。
+    
+- SlotTable  的变化 ：比较的结果是 SlotTable 中对应的数据被更新、标记为删除，或者插入了新的数据。
+    
+
+  
+
+重要的是，到这一步为止，真实的 UI 节点树（由 LayoutNode  构成）还没有发生任何变化。  SlotTable  只是一个更新后的“蓝图”或“指令集”。
+
+  
+
+Vsync 响应驱动重组 runRecomposeAndApplyChanges 在 window 创建时，增加到 Vsync 的 callback 中
+
+```
+suspend fun runRecomposeAndApplyChanges() = recompositionRunner { parentFrameClock ->    while (shouldKeepRecomposing) {        awaitWorkAvailable()        // Don't await a new frame if we don't have frame-scoped work        if (!recordComposerModifications()) continue}
+```
+
+```
+private fun recordComposerModifications(): Boolean {    val changes = synchronized(stateLock) {        if (snapshotInvalidations.isEmpty()) return hasFrameWorkLocked        snapshotInvalidations.also { snapshotInvalidations = IdentityArraySet() }    }    val compositions = synchronized(stateLock) {        knownCompositions.toMutableList()    }    var complete = false    try {        run {            compositions.fastForEach { composition ->                composition.recordModificationsOf(changes)}
+```
+
+来到具体的  compositions 保存之前保存的修改的状态变量
+
+```
+override fun recordModificationsOf(values: Set<Any>) {    while (true) {        val old = pendingModifications.get()        val new: Any = when (old) {            null, PendingApplyNoModifications -> values            isSet<*> -> arrayOf(old, values)            isArray<*> -> (oldasArray<Set<Any>>) + values            else -> error("corrupt pendingModifications: $pendingModifications")        }        if (pendingModifications.compareAndSet(old, new)) {            if (old == null) {                synchronized(lock) {                    drainPendingModificationsLocked()                }            }            break        }    }}
+```
+
+Recomposer 将该 Composition 记录到 compositionInvalidations 中，标脏操作，便于后续执行
+
+```
+internal override fun invalidate(composition: ControlledComposition) {    synchronized(stateLock) {        if (composition !in compositionInvalidations) {            compositionInvalidations += composition            deriveStateLocked()        } else null    }?.resume(Unit)}
+```
+
+Vsync callback 中执行重组流程：
+
+```
+trace("Recomposer:recompose") {    // Drain any composer invalidations from snapshot changesand record    // composers to work on    recordComposerModifications()    synchronized(stateLock) {        compositionInvalidations.fastForEach {            toRecompose += it        }        compositionInvalidations.clear()    }    // Perform recomposition for any invalidated composers    val modifiedValues = IdentityArraySet<Any>()    val alreadyComposed = IdentityArraySet<ControlledComposition>()    while (toRecompose.isNotEmpty() || toInsert.isNotEmpty()) {        try {            toRecompose.fastForEach { composition ->                alreadyComposed.add(composition)                performRecompose(composition, modifiedValues)?.let {                    toApply += it                }            }        } catch (e: Exception) {            processCompositionError(e, recoverable = true)            clearRecompositionState()            return@withFrameNanos        } finally {            toRecompose.clear()        }
+```
+
+Composer doCompose 具体执行重组逻辑如果不设计新 UI 节点插入则 skipCurrentGroup
+
+```
+private fun doCompose(    invalidationsRequested: IdentityArrayMap<RecomposeScopeImpl, IdentityArraySet<Any>?>,    content: (@Composable () -> Unit)?) {    runtimeCheck(!isComposing) { "Reentrant composition is not supported" }    trace("Compose:recompose") {        compositionToken = currentSnapshot().id        providerUpdates.clear()        invalidationsRequested.forEach { scope, set ->            val location = scope.anchor?.location ?: return            invalidations.add(Invalidation(scope, location, set))        }        invalidations.sortBy { it.location }        nodeIndex = 0        var complete = false        isComposing = true        try {            startRoot()            // vv Experimental for forced            @Suppress("UNCHECKED_CAST")            val savedContent = nextSlot()            if (savedContent !== content && content != null) {                updateValue(content as Any?)            }            // ^^ Experimental for forced            // Ignore reads of derivedStateOf recalculations            observeDerivedStateRecalculations(derivedStateObserver) {                if (content != null) {                    startGroup(invocationKey, invocation)                    invokeComposable(this, content)                    endGroup()                } elseif (                    (forciblyRecompose || providersInvalid) &&                    savedContent != null &&                    savedContent != Composer.Empty                ) {                    startGroup(invocationKey, invocation)                    @Suppress("UNCHECKED_CAST")                    invokeComposable(this, savedContent as @Composable () -> Unit)                    endGroup()                } else {                    skipCurrentGroup()                }            }            endRoot()            complete = true        } finally {            isComposing = false            invalidations.clear()            if (!complete) abortRoot()        }    }}
+```
+
+skipCurrentGroup 会执行 recomposeToGroupEnd，其中会调用 compose 具体执行状态变量关联的 composble 函数
+
+```
+private fun recomposeToGroupEnd() {    var firstInRange = invalidations.firstInRange(reader.currentGroup, end)    while (firstInRange != null) {        val location = firstInRange.location        invalidations.removeLocation(location)        if (firstInRange.isInvalid()) {            recomposed = true            reader.reposition(location)            val newGroup = reader.currentGroup            // Record the changes to the applier location            recordUpsAndDowns(oldGroup, newGroup, parent)            oldGroup = newGroup            // Calculate the node index (the distance index in the node this groups nodes are            // located in the parent node).            nodeIndex = nodeIndexOf(                location,                newGroup,                parent,                recomposeIndex            )            // Calculate the compound hash code (a semi-unique code for every group in the            // composition used to restore saved state).            compoundKeyHash = compoundKeyOf(                reader.parent(newGroup),                parent,                recomposeCompoundKey            )            // We have moved so the cached lookup of the provider is invalid            providerCache = null            // Invoke the scope's composition function            firstInRange.scope.compose(this)            // We could have moved out of a provider so the provider cache is invalid.            providerCache = null            // Restore the parent of the reader to the previous parent            reader.restoreParent(parent)        } else {            // If the invalidation is not used restore the reads that were removed when the            // the invalidation was recorded. This happens, for example, when on of a derived            // state's dependencies changed but the derived state itself was not changed.            invalidateStack.push(firstInRange.scope)            firstInRange.scope.rereadTrackedInstances()            invalidateStack.pop()        }        // Using slots.current here ensures composition always walks forward even if a component        // before the current composition is invalidated when performing this composition. Any        // such components will be considered invalid for the next composition. Skipping them        // prevents potential infinite recomposes at the cost of potentially missing a compose        // as well as simplifies the apply as it always modifies the slot table in a forward        // direction.        firstInRange = invalidations.firstInRange(reader.currentGroup, end)    }}
+```
+
+ComposableLambdaImpl 重组执行方法，根据结果来判断 compose 是否有需要更新
+
+```
+override operator fun invoke(p1: Any?, c: Composer, changed: Int): Any? {    val c = c.startRestartGroup(key)    trackRead(c)    val dirty = changed orif (c.changed(this)) differentBits(1) else sameBits(1)    val result = (        _block as (            p1: Any?,            c: Composer,            changed: Int        ) -> Any?        )(        p1,        c,        dirty    )    c.endRestartGroup()?.updateScope { nc, _ ->        this(p1, nc, updateChangedFlags(changed) or0b1)    }    return result}
+```
+
+Composer updateValue 有修改则记录到 observer 中后续 apply change 回调这里
+
+```
+internal fun updateValue(value: Any?) {    if (inserting) {        writer.update(value)        if (valueis RememberObserver) {            record { _, _, rememberManager -> rememberManager.remembering(value) }            abandonSet.add(value)        }    } else {        val groupSlotIndex = reader.groupSlotIndex - 1        if (valueis RememberObserver) {            abandonSet.add(value)        }        // Composition apply changes        recordSlotTableOperation(forParent = true) { _, slots, rememberManager ->            if (valueis RememberObserver) {                rememberManager.remembering(value)            }            when (val previous = slots.set(groupSlotIndex, value)) {                is RememberObserver ->                    rememberManager.forgetting(previous)                is RecomposeScopeImpl -> previous.release()            }        }    }}
+```
+
+  
+
+#### C 状态更新
+
+以一个具体例子来演示状态的写入流程：
+
+```
+@Composablefun ConditionalUI(showProfile: Boolean) {    Column {        Text("Header")        if (showProfile) {            ProfileView() // 分支 A        } else {            LoginPrompt() // 分支 B        }        Text("Footer")    }}
+```
+
+用序列图来可视化 ConditionalUI 在 showProfile 从 true 变为 false 时的重组过程。
+
+![图片](https://mmbiz.qpic.cn/sz_mmbiz_png/RibZ8KwAStDNVbP5mkH9TKLec54rCM35vcSV3YVXIUOZs0WrnkeGO8TdmdNYzWE4ZUtlgasKUUcFgwwqaA8MWAw/640?from=appmsg&randomid=e3wdv3f5&tp=webp&wxfrom=5&wx_lazy=1)
+
+  
+
+以插入一个 UI 节点为例子：
+
+```
+internal fun updateValue(value: Any?) {    if (inserting) {        writer.update(value)        if (valueis RememberObserver) {            record { _, _, rememberManager -> rememberManager.remembering(value) }            abandonSet.add(value)        }    } else {        val groupSlotIndex = reader.groupSlotIndex - 1        if (valueis RememberObserver) {            abandonSet.add(value)        }        recordSlotTableOperation(forParent = true) { _, slots, rememberManager ->            if (valueis RememberObserver) {                rememberManager.remembering(value)            }            when (val previous = slots.set(groupSlotIndex, value)) {                is RememberObserver ->                    rememberManager.forgetting(previous)                is RecomposeScopeImpl -> previous.release()            }        }    }}
+```
+
+SlotWriter update 方法
+
+```
+fun update(value: Any?): Any? {    val result = skip()    set(value)    return result}
+```
+
+```
+fun skip(): Any? {    if (insertCount > 0) {        insertSlots(1, parent)    }    return slots[dataIndexToDataAddress(currentSlot++)]}
+```
+
+具体 insert 过程
+
+```
+private fun insertSlots(size: Int, group: Int) {    if (size > 0) {        moveSlotGapTo(currentSlot, group)        val gapStart = slotsGapStart        var gapLen = slotsGapLen        if (gapLen < size) {            val slots = slots            // Create a bigger gap            val oldCapacity = slots.size            val oldSize = oldCapacity - gapLen            // Double the size of the array, but at least MinGrowthSize and >= size            val newCapacity = max(                max(oldCapacity * 2, oldSize + size),                MinSlotsGrowthSize            )            val newData = Array<Any?>(newCapacity) { null }            val newGapLen = newCapacity - oldSize            val oldGapEndAddress = gapStart + gapLen            val newGapEndAddress = gapStart + newGapLen            // Copy the old arrays into the new arrays            slots.copyInto(                destination = newData,                destinationOffset = 0,                startIndex = 0,                endIndex = gapStart            )            slots.copyInto(                destination = newData,                destinationOffset = newGapEndAddress,                startIndex = oldGapEndAddress,                endIndex = oldCapacity            )            // Update the gap and slots            this.slots = newData            gapLen = newGapLen        }        val currentDataEnd = currentSlotEnd        if (currentDataEnd >= gapStart) this.currentSlotEnd = currentDataEnd + size        this.slotsGapStart = gapStart + size        this.slotsGapLen = gapLen - size    }}
+```
+
+Composition compose 执行结束会 apply 到 snapshot 
+
+```
+private inline fun <T> composing(    composition: ControlledComposition,    modifiedValues: IdentityArraySet<Any>?,    block: () -> T): T {    val snapshot = Snapshot.takeMutableSnapshot(        readObserverOf(composition), writeObserverOf(composition, modifiedValues)    )    try {        return snapshot.enter(block)    } finally {        applyAndCheck(snapshot)    }}
+```
+
+触发 snaptshot 更新
+
+```
+private fun applyAndCheck(snapshot: MutableSnapshot) {    try {        val applyResult = snapshot.apply()        if (applyResult is SnapshotApplyResult.Failure) {            error(                "Unsupported concurrent change during composition. A state object was " +                    "modified by composition as well as being modified outside composition."            )            // TODO(chuckj): Consider lifting this restriction by forcing a recompose        }    } finally {        snapshot.dispose()    }}
+```
+
+  
+
+#### D UI 更新
+
+在组合阶段的末尾，Composer 会根据 SlotTable 的变化，对 LayoutNode 树执行精确的“外科手术式”操作：
+
+- 更新 (Update)：如果一个 Composable 只是参数变了（例如 Text 的文本内容），Composer 会从 SlotTable 中找到对应的、 已经存在 的 LayoutNode，并调用其 update 方法来更新属性。节点本身被复用，不会重新创建。
+- 插入 (Insert)：如果出现了一个新的 Composable（例如 if 条件从 false 变为 true），Composer 会执行其 emit 指令，创建一个 新的  LayoutNode 实例，并将其插入到 LayoutNode 树的正确位置。
+- 删除 (Remove)：如果一个 Composable 不再被调用，Composer 会找到它对应的 LayoutNode，并将其从树中移除。
+- 移动 (Move)：如果使用了 key，并且列表项的顺序发生了变化，Composer 能够识别出这种情况，并直接在 LayoutNode 树中 移动 现有的节点到新的位置，而不是销毁再重建它们。
+Vsync callback 中在执行重组之后，会将重组后的结果使用 Applier 更新到 LayoutNode
+
+``` kotlin
+if (toApply.isNotEmpty()) {  
+    changeCount++  
+  
+    // Perform apply changes  
+    try {  
+        // We could do toComplete += toApply but doing it like below  
+        // avoids unncessary allocations since toApply is a mutable list  
+        // toComplete += toApply  
+        toApply.fastForEach { composition->  
+            toComplete.add(composition)  
+        }  
+        toApply.fastForEach { composition->  
+            composition.applyChanges()  
+        }  
+    } catch (e: Exception) {  
+        processCompositionError(e)  
+        clearRecompositionState()  
+        return@withFrameNanos  
+    } finally {  
+        toApply.clear()  
+    }  
+}
+```
+
+Apply changes，根据 SlotWriter 在重组阶段记录的需要变更的 slots
+
+```kotlin
+private fun applyChangesInLocked(changes: MutableList<Change>) {  
+    val manager = RememberEventDispatcher(abandonSet)  
+    try {  
+        if (changes.isEmpty()) return  
+        trace("Compose:applyChanges") {  
+            applier.onBeginChanges()  
+  
+            // Apply allchanges  
+            slotTable.write { slots ->  
+                val applier = applier  
+                changes.fastForEach { change ->  
+                    change(applier, slots, manager)  
+                }  
+                changes.clear()  
+            }  
+            applier.onEndChanges()  
+        }  
+  
+        // Side effects run after lifecycle observers so that any remembered objects  
+        // that implement RememberObserver receive onRemembered before a side effect  
+        // that captured it and operates on it can run.  
+        manager.dispatchRememberObservers()  
+        manager.dispatchSideEffects()  
+  
+        if (pendingInvalidScopes) {  
+            trace("Compose:unobserve") {  
+                pendingInvalidScopes = false  
+                observations.removeValueIf { scope -> !scope.valid }  
+                cleanUpDerivedStateObservations()  
+            }  
+        }  
+    } finally {  
+        // Only dispatch abandons if we do not have any late changes. The instances in the  
+        // abandon set can be remembered in the late changes.  
+        if (this.lateChanges.isEmpty())  
+            manager.dispatchAbandons()  
+    }  
+}
+```
+
+这里的 applyChange 会执行状态变量关联的操作，比如 Modifier 的赋值
+
+```kotlin
+override var modifier: Modifier = Modifier  
+    set(value) {  
+        require(!isVirtual || modifier === Modifier) {  
+            "Modifiers are not supported on virtual LayoutNodes"  
+        }  
+        field = value  
+        nodes.updateFrom(value)  
+        layoutDelegate.updateParentData()  
+        if (nodes.has(Nodes.IntermediateMeasure)) {  
+            if (lookaheadRoot == null) {  
+                lookaheadRoot = this  
+            }  
+        }  
+    }
+```
+
+Composer 中调度 Applier 完成 LayoutNode 插入的例子：
+
+```kotlin
+// Insert nodes if necessary  
+if (nodesToInsert.isNotEmpty()) {  
+    record { applier, _, _ ->  
+        val base = effectiveNodeIndex  
+        @Suppress("UNCHECKED_CAST")  
+        nodesToInsert.fastForEachIndexed { i, node ->  
+            applier as Applier<Any?>  
+            applier.insertBottomUp(base + i, node)  
+            applier.insertTopDown(base + i, node)  
+        }  
+    }  
+    if (to.slotTable == slotTable) {  
+        // Inserting the contentinto the current slot tablethen we need to  
+        // update the virtual node counts. Otherwise, we are inserting into  
+        // a new slot table which is being created, notupdated, so the virtual  
+        // node counts donot need to be updated.  
+        val group = slotTable.anchorIndex(anchor)  
+        updateNodeCount(  
+            group,  
+            updatedNodeCount(group) + nodesToInsert.size  
+        )  
+    }  
+}
+```
+
+## 布局
+
+布局部分和具体的 UI 节点相关，不同平台实现大同小异不再冗余阐述。
+
+- 触发布局：一旦 LayoutNode 树被修改（无论是属性更新、插入、删除还是移动），这些被影响的节点及其父节点会被标记为“需要重新布局”。
+- 执行布局：布局阶段开始，Compose 会从被标记的最高层节点开始，重新测量和定位受影响的 LayoutNode。
+- 执行绘制：布局完成后，任何在屏幕上位置或外观发生变化的 LayoutNode 会被重新绘制到屏幕上。  
+## 绘制
+
+绘制阶段的核心思想是 录制 和 回放，将绘制指令录制到 RenderNode displayList 中，在 RenderThread 中完成回放，RenderThread 调用 Skia 转译指令绘制到 Vulkan
+
+![图片](https://mmbiz.qpic.cn/sz_mmbiz_png/RibZ8KwAStDNVbP5mkH9TKLec54rCM35vJr4RRLJicricRQRYg4OmPE7BHzbMTWNAWzQTfqAkr1Xib0OXSd5T0l4VQ/640?from=appmsg&randomid=73sibx84&tp=webp&wxfrom=5&wx_lazy=1)
+
+  
+
+A RecordingCanvas
+
+LayoutNode 实际绘制过程中通过DrawScope 中调用 drawRect, drawLine 等方法时，并不是在操作一个传统的、立即生效的 Canvas。操作的是一个 RecordingCanvas（在底层是 RenderNode.beginRecording() 返回的 Canvas）。
+
+- 指令记录：这个 Canvas 对象所做的，仅仅是将的调用（drawRect）及其参数（颜色、尺寸、位置）序列化成一个绘图指令，并追加到 RenderNode 内部的 显示列表（Display List） 中。这个过程几乎没有 CPU 开销。
+    
+- 绘制阶段的产出：所以，整个绘制阶段的最终产出，不是屏幕上的像素，而是一棵 完成了绘图指令记录的   RenderNode   树 。
+    
+
+  
+
+B AndroidComposeView 
+
+  
+
+AndroidComposeView 是 Compose 世界与传统 Android View 世界的边界。它继承自 ViewGroup。它的核心职责之一是在合适的时机，将 Compose 产出的 RenderNode 树“嫁接”到 View 系统的 RenderNode 树上，并触发一次绘制。
+
+- attach  和   detach ：当 AndroidComposeView 被附加到窗口时 (onAttachedToWindow)，它会创建 Recomposer 并启动整个 Compose Runtime。当它分离时，会关闭 Recomposer 并释放资源。
+    
+- dispatchDraw：当 Android 的 View 绘制体系要求 AndroidComposeView 进行绘制时（调用其 dispatchDraw 方法），它并不执行传统的 onDraw。取而代之的是，它会调用一个内部方法，该方法将 Compose 的根 RenderNode 同步到 View 的渲染线程，即上一过程中录制好的 RenderNode 中更新好的 DisplayList。
+    
+
+  
+
+C 绘制缓存
+
+LayoutNode 非常智能，它会跟踪自身的绘制内容是否发生变化。如果一个 LayoutNode 只是移动了位置，而其内部内容（如背景色）没有变，它的 RenderNode 缓存就是有效的，不需要重新记录（beginRecording）。渲染线程只需要用新的变换矩阵（translationX/Y）重用这个 RenderNode 即可。
+
+  
+
+此外，Compose 会尽可能地 合并   RenderNode 。如果连续的几个 LayoutNode 都没有使用 graphicsLayer，它们的绘制指令会被记录到同一个父 RenderNode 中。这减少了 RenderNode 树的深度，降低了渲染引擎的管理开销，从而提升了性能。
+
+  
+
+通过对这些底层机制的深入理解，可以看到 Compose 并非简单的“状态变了就重画”。它是一个经过极致优化的、从编译器到渲染引擎端到端设计的精密系统，其核心哲学在于：通过在编译期和运行时收集尽可能多的信息，将更新的粒度降到最低。
+
+  
+
+  
+
+源码位置：
+
+![图片](https://mmbiz.qpic.cn/sz_mmbiz_png/RibZ8KwAStDNVbP5mkH9TKLec54rCM35vGKnpVGZhRX3VUoEjicFM7gR06Cj6vMaxrHC2WVVwe7JqdYGwVGJhcyQ/640?from=appmsg&randomid=6xweyttj&tp=webp&wxfrom=5&wx_lazy=1)
 
 # Gap Buffer算法
 1. 一种文本编辑算法；
@@ -729,7 +1418,7 @@ fun WebViewComponent(url: String) {
 Compose 提供了灵活的自定义扩展能力，可以满足大多数 UI 设计需求。根据实际情况选择合适的自定义方式，能够帮助你轻松实现多种复杂的 UI 效果。
 # 参考链接
 1. [妈！Jetpack Compose太难学了，别怕，这里帮你理清几个概念](https://juejin.cn/post/7244420350753144891?searchId=202507052141214BE0E8888B9B55CE12B4#heading-8
-2. [鸿蒙 KMP Compose 源码万字简析](https://mp.weixin.qq.com/s?__biz=MzUyMjI4MzE1MA==&mid=2247484957&idx=1&sn=e1f415b0cce0eb0eafcf031aaf7790ed&chksm=f9cf77fcceb8feea493de60229800eee81c01cf7486b99d7abaa4da29fdc2876edd0834a4e31&cur_album_id=4008501025152761864&scene=189#wechat_redirect))
+2. [鸿蒙 KMP Compose 源码万字简析](https://mp.weixin.qq.com/s?__biz=MzUyMjI4MzE1MA==&mid=2247484967&idx=1&sn=6496e0421d57ea0262ca10f5f7950c43&chksm=f9cf77c6ceb8fed0bd9295a62ed5cf9166b5df2a07e4a83828c4b020e4699cbacabc92604f13&cur_album_id=4008501025152761864&scene=189#wechat_redirect)
 3. [鸿蒙 KMP Compose 开发范式理解](https://mp.weixin.qq.com/s?__biz=MzUyMjI4MzE1MA==&mid=2247484957&idx=1&sn=e1f415b0cce0eb0eafcf031aaf7790ed&chksm=f9cf77fcceb8feea493de60229800eee81c01cf7486b99d7abaa4da29fdc2876edd0834a4e31&cur_album_id=4008501025152761864&scene=189#wechat_redirect)
 4. [Jetpack Compose 【一】入门：拥抱现代 Android UI 开发](https://juejin.cn/post/7473316836362141696?searchId=202507122209440BB77DF9C87C1B5340FB)
 5. [Jetpack Compose 【二】状态管理详解](https://juejin.cn/post/7473278704052994082#heading-12)
