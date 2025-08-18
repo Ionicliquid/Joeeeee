@@ -1,3 +1,27 @@
+# 声明式UI与MVI
+## MVI
+![[mvi.png]]
+
+### 核心思想：构建一个完全封闭和可预测的数据循环
+1. Model：表示 UI的状态（State），是唯一的数据源；
+2. View：Composable 函数，负责渲染 State，并将用户的操作转换为意图（Intent）;
+3.  Intent：用户的操作意图（如点击按钮、输入文本），它不会直接修改状态；
+### 优点
+1. 极度可预测：数据永远单向流动，状态来源清晰，调试非常方便；
+2. 唯一数据源：整个 UI 只依赖一个 State 对象，状态一致性得到保证
+3. 易于测试：可以独立测试ViewModel 逻辑：给定一个初始 State和一个 Intent，断言最终的 State 是否符合预期；
+## MVVM
+![[mvvm.png]]
+## 对比
+
+| 特性   | MVI                    | MVVM (在Compose中)               |
+| ---- | ---------------------- | ------------------------------ |
+| 数据流  | 严格单向 (Intent -> State) | 通常也是单向 (Event -> State)，但约束更松散 |
+| 状态管理 | 强制单一State对象            | 推荐单一State对象，但也可以暴露多个StateFlow  |
+| 核心理念 | 强调“意图”，用户行为驱动          | 强调“数据绑定”，状态驱动                  |
+| 官方推荐 | Google官方首推             | 广泛接受且完全兼容                      |
+| 适用场景 | 复杂状态管理、需要高可追溯性的页面      | 各种场景，尤其适合从传统View迁移的项目          |
+
 # KMP源码
 ## 背景
 
@@ -212,16 +236,9 @@ LayoutNode(Column)  ├── LayoutNode(Button)  │   └── LayoutNod
 A SlotTable
 
 为了实现高效的插入和删除，SlotTable 的底层数组实际上使用了一种源自文本编辑器的优化技术—— Gap Buffer 。
-
-  
-
 - 工作原理：想象一个巨大的数组，Composer 的当前插入点就像文本光标。当需要在光标处插入新内容时，它不是移动光标之后的所有数据，而是在光标位置创建一个“间隙”（Gap）。插入操作就在这个间隙中进行。当光标需要移动时，只需要移动间隙两端的数据来“填充”旧的间隙，并在新位置创建间隙。对于连续的 Composable 调用，光标（即 Composer 的内部指针）顺序移动，插入效率极高。
     
 - 优势：这种机制使得在 SlotTable 中间插入或删除一组节点（例如，if 条件从 false 变为 true）的成本，与这组节点的数量成正比，而与 SlotTable 的总大小无关。这是 Compose 能够高效处理动态 UI（如长列表）的基石之一。
-    
-
-  
-
 Gap 的设置使得 UI 变化区域存在一段空间，可以使得插入或者删除 UI 节点变得非常高效，无需移动整个数组即可完成，比如在 A B GAP GAP C D 中插入 X，只需要将 GAP 起始点位置插入 X 即可。
 
 ![图片](https://mmbiz.qpic.cn/sz_mmbiz_png/RibZ8KwAStDNVbP5mkH9TKLec54rCM35vOeRgdMhmxeFhGsINdxWu1SVEukrGQXycTPP3jjA1jZKfAnqX5LnO8w/640?from=appmsg&randomid=e1509hj0&tp=webp&wxfrom=5&wx_lazy=1)
@@ -249,6 +266,24 @@ State  改变 → 重组 Composable → 更新   SlotTable   → 精确修�
 GlobalSnapshotManager 注册全局 UI 刷新事件的监听
 
 ``` kotlin
+internal fun AbstractComposeView.setContent(  
+    parent: CompositionContext,  
+    content: @Composable () -> Unit  
+): Composition {  
+    GlobalSnapshotManager.ensureStarted()  
+    val composeView =  
+        if (childCount > 0) {  
+            getChildAt(0) as? AndroidComposeView  
+        } else {  
+            removeAllViews()  
+            null  
+        }  
+            ?: AndroidComposeView(context, parent.effectCoroutineContext).also {  
+                addView(it.view, DefaultLayoutParams)  
+            }  
+    return doSetContent(composeView, parent, content)  
+}
+
 internal object GlobalSnapshotManager {  
     private val started = AtomicBoolean(false)  
   
@@ -270,9 +305,7 @@ internal object GlobalSnapshotManager {
 }
 ```
 
-  
-
-状态管理代理状态变量的 Set 和 Get 实现对状态变量读写的监听，SnapshotMutableStateImpl
+  状态管理代理状态变量的 Set 和 Get 实现对状态变量读写的监听，SnapshotMutableStateImpl
 
 ```kotlin
 internal open class SnapshotMutableStateImpl<T>(  
@@ -342,11 +375,8 @@ CoroutineScope(AndroidUiDispatcher.Main).launch {
 
 ``` kotlin
 fun sendApplyNotifications() {  
-    val changes = sync {  
-        currentGlobalSnapshot.get().modified?.isNotEmpty() == true  
-    }  
-    if (changes)  
-        advanceGlobalSnapshot()  
+    val changes = sync { globalSnapshot.hasPendingChanges() }  
+    if (changes) advanceGlobalSnapshot()  
 }
 ```
 
@@ -364,10 +394,7 @@ private fun <T> advanceGlobalSnapshot(block: (invalid: SnapshotIdSet) -> T): T 
             pendingApplyObserverCount.add(1)  
         }  
         takeNewGlobalSnapshot(previousGlobalSnapshot, block)  
-    }  
-  
-    // If the previous global snapshot had any modified states then notify the registered apply  
-    // observers.  
+    }   
     modified?.let {  
         try {  
             val observers: List<(Set<Any>, Snapshot) -> Unit> =  
@@ -399,13 +426,8 @@ private suspend fun recompositionRunner(
 ) {  
     val parentFrameClock = coroutineContext.monotonicFrameClock  
     withContext(broadcastFrameClock) {  
-        // Enforce mutual exclusion of callers; register self as current runner  
         val callingJob = coroutineContext.job  
         registerRunnerJob(callingJob)  
-  
-        // Observe snapshot changes and propagate them to known composers only from  
-        // this caller's dispatcher, never working with the same composer in parallel.  
-        // unregisterApplyObserver is called as part of the big finally below  
         val unregisterApplyObserver = Snapshot.registerApplyObserver { changed, _ ->  
             synchronized(stateLock) {  
                 if (_state.value >= State.Idle) {  
@@ -447,20 +469,12 @@ private suspend fun recompositionRunner(
 ![图片](https://mmbiz.qpic.cn/sz_mmbiz_png/RibZ8KwAStDNVbP5mkH9TKLec54rCM35vYT0hyFkB8LiaGkmA2MQ3hVauYPhxHmJJslhNF71OHIR3zsOVGAmiaDXg/640?from=appmsg&randomid=hjk6h1yj&tp=webp&wxfrom=5&wx_lazy=1)
 
   
-
 - 重组的本质：当状态（State）改变时，Recomposer 会调度受该状态影响的 Composable 函数重新执行。这个过程就是“重组”。
     
 - SlotTable  的角色 ：重组的主要产物是 更新   SlotTable 。Composer 会将 Composable 函数的新执行结果与 SlotTable 中记录的旧结果进行比较。
     
 - SlotTable  的变化 ：比较的结果是 SlotTable 中对应的数据被更新、标记为删除，或者插入了新的数据。
-    
-
-  
-
 重要的是，到这一步为止，真实的 UI 节点树（由 LayoutNode  构成）还没有发生任何变化。  SlotTable  只是一个更新后的“蓝图”或“指令集”。
-
-  
-
 Vsync 响应驱动重组 runRecomposeAndApplyChanges 在 window 创建时，增加到 Vsync 的 callback 中
 
 ```
@@ -1004,7 +1018,7 @@ Column {
 
 #### `remember` 和 `mutableStateOf` 的底层原理
 
-- `mutableStateOf` 是一个 `State<T>` 对象，内部使用了**观察者模式**，当状态变化时，Compose 会通知相关的 Composable 重新执行并更新 UI。
+- `mutableStateOf` 是一个 `State<T>` 对象，内部使用了观察者模式，当状态变化时，Compose 会通知相关的 Composable 重新执行并更新 UI。
 - `remember` 本质是一个缓存机制，能够在当前组合范围（Composition）内保持数据，防止 UI 重组时丢失状态。
 
 ### Compose 重组机制（Recomposition）
@@ -1427,3 +1441,12 @@ Compose 提供了灵活的自定义扩展能力，可以满足大多数 UI 设�
 8. [深入浅出 JetPack Compose UI 自动更新原理](https://blog.csdn.net/weixin_61845324/article/details/134268501)
 9. [Compose编程思想 -- 深入理解Compose原理](https://juejin.cn/post/7355307547479572521#heading-9)
 10. [开源一个企业可用的 Kotlin Multiplatform 项目模板](https://juejin.cn/post/7302338286768635956?searchId=202507292001582A7C0BD3C1624A8E74F1)
+
+## 总结
+从 3个方面来介绍 Compose ，最后在介绍下KMP上 Compose 的机制
+1. 声明式 UI与MVI架构
+2. Compose的UI组织方式
+3. 状态管理
+	1. `mutableStateOf` 是一个 `State<T>` 对象，内部使用了观察者模式，当状态变化时，Compose 会通知相关的 Composable 重新执行并更新 UI。
+	2. remember` 本质是一个缓存机制，能够在当前组合范围（Composition）内保持数据，防止 UI 重组时丢失状态。
+4. KMP跨平台实现
