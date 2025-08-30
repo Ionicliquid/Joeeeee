@@ -5,6 +5,13 @@
 ## invoke
 
 ## inline noinline crossinline
+### inline
+inline是用来修饰函数的，在编译时，将该方法的函数类型的参数的方法体内联到方法调用处；
+### noinline
+noinline 用来修饰函数类型参数，内联后，该参数不在是函数类型，无法作为函数类型参数传递给其他函数；
+### crossinline
+**Kotlin中规定，在非内联函数中，lambda 表达式是不允许使用return返回。** crossline修饰参数，搭配inline使用
+如果这个函数类型的参数直接在其他非内联中调用，从形式上来说变成了可以直接返回，编译报错；crossinline的作用仅仅是当有被这个修饰的参数会告诉IDE来检查你写的代码中有没有包含return，假如有的话会编译不过，就是这么简单暴力。
 
 ## 扩展函数
 
@@ -1373,8 +1380,24 @@ internal fun invokeOnCompletionInternal(
 
 1. 跟踪它的初始化流程initCancellability -> installParentHandle->invokeOnCompletion->invokeOnCompletionInternal
 2. 熟悉的tryPutNodeIntoList，在Job的cancel流程中了解到，该方法会将子Job节点加入到父Job的状态管理列表中。
-
-# suspendCoroutineUninterceptedOrReturn
+# suspendCancellableCoroutine
+```kotlin
+public suspend inline fun <T> suspendCancellableCoroutine(  
+    crossinline block: (CancellableContinuation<T>) -> Unit  
+): T =  
+    suspendCoroutineUninterceptedOrReturn { uCont ->  
+        val cancellable = CancellableContinuationImpl(uCont.intercepted(), resumeMode = MODE_CANCELLABLE)  
+	    cancellable.initCancellability()  
+        block(cancellable)  
+        cancellable.getResult()  
+    }
+    
+ public suspend inline fun <T> suspendCoroutineUninterceptedOrReturn(crossinline block: (Continuation<T>) -> Any?): T {  
+    contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }  
+    throw NotImplementedError("Implementation of suspendCoroutineUninterceptedOrReturn is intrinsic")  
+}   
+```
+1. suspendCoroutineUninterceptedOrReturn 是编译器实现的函数，源码中没有具体的函数体。
 
 # 参考链接
 
