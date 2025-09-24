@@ -1218,9 +1218,6 @@ public inline fun <T, R> Flow<T>.transform(
 ## 热流
 
 数据的生成与收集者无关，即使没有订阅者也会执行（需手动启动）
-
-### MutableStateFlow
-
 ### MutableSharedFlow
 
 ```kotlin
@@ -1240,11 +1237,24 @@ public fun <T> MutableSharedFlow(
 }
 ```
 
-1. SharedFlowImpl
-   1. replay：新订阅者接收的历史数据量；
-   2. bufferCapacity：额外缓冲区大小
-   3. onBufferOverflow:默认为SUSPEND
-
+创建 SharedFlowImpl，接受 3 个参数
+1. replay：回放容量（新订阅者接收的历史数据量）；
+2. bufferCapacity：缓冲区大小
+3. onBufferOverflow：缓冲策略分为 3 种，默认为SUSPEND；
+	1. BufferOverflow.SUSPEND ：挂起等待；
+	2. BufferOverflow.DROP_LATEST：丢弃最新值；
+	3. BufferOverflow.DROP_OLDEST：丢弃最老的值；
+#### 数据结构
+1. replay：回放容量
+2. bufferCapacity：缓存容量
+3. buffer：缓存数组，类型为 Any，包含数据和 Emitter 对象；
+4. bufferSize：缓存数据的数量；
+5. queueSize：缓存 Emitter对象数量；
+6. replayIndex：回放数据的起始索引；
+7. minCollectorIndex：收集者起始索引，不存在收集者时，指向缓存数据的末尾（head + bufferSize）
+8. replaySize：回放数据的数量（head + bufferSize - replayIndex）
+9. head：数据的起始索引（minOf(minCollectorIndex, replayIndex)）
+10. totalSize：buffer 中的数据数量（bufferSize + queueSize；
 #### emit
 
 ```kotlin
@@ -1268,8 +1278,8 @@ override fun tryEmit(value: T): Boolean {
     }
 
 private fun tryEmitLocked(value: T): Boolean {
-        if (nCollectors == 0) return tryEmitNoCollectorsLocked(value)
-        if (bufferSize >= bufferCapacity && minCollectorIndex <= replayIndex) {
+        if (nCollectors == 0) return tryEmitNoCollectorsLocked(value) //1
+        if (bufferSize >= bufferCapacity && minCollectorIndex <= replayIndex) { //2
             when (onBufferOverflow) {
                 BufferOverflow.SUSPEND -> return false 
                 BufferOverflow.DROP_LATEST -> return true 
@@ -1286,28 +1296,162 @@ private fun tryEmitLocked(value: T): Boolean {
     }
 
 private fun tryEmitNoCollectorsLocked(value: T): Boolean {
-        assert { nCollectors == 0 } //1
-        if (replay == 0) return true //2
+        assert { nCollectors == 0 } 
+        if (replay == 0) return true 
         enqueueLocked(value) 
         bufferSize++ 
-        if (bufferSize > replay) dropOldestLocked()
+        if (bufferSize > replay) dropOldestLocked() //1
         minCollectorIndex = head + bufferSize 
         return true
     }
+    
+private suspend fun emitSuspend(value: T) = suspendCancellableCoroutine<Unit> sc@{ cont ->  
+    var resumes: Array<Continuation<Unit>?> = EMPTY_RESUMES  
+    val emitter = synchronized(this) lock@{  
+        if (tryEmitLocked(value)) {  //1
+            cont.resume(Unit)  
+            resumes = findSlotsToResumeLocked(resumes)  //2
+            return@lock null  
+        }  
+        Emitter(this, head + totalSize, value, cont).also {   //3
+            enqueueLocked(it)  
+            queueSize++   
+            if (bufferCapacity == 0) resumes = findSlotsToResumeLocked(resumes)  
+        }  
+    }    emitter?.let { cont.disposeOnCancellation(it) }  
+    for (r in resumes) r?.resume(Unit)  //4
+}   
 ```
+1. tryEmit:尝试发射数据，成功则返回；
+	1. tryEmitLocked：返回 true表示发射成功
+		1. tryEmitNoCollectorsLocked：没有指定收集者，永远返回 true；
+			1. 根据回放容量缓存数据，丢弃最老的值；
+		2. 缓冲数据超过缓冲容量同时存在收集者没有处理完数据，缓冲策略为DROP_LATEST时返回 true;
+2. emitSuspend：发射失败，请求挂起；
+	1. tryEmitLocked：再次尝试发射数据；
+	2. findSlotsToResumeLocked：找到所有挂起等待的收集者续体；
+	3. 创建Emitter 对象加入到缓存数组中；
+	4. 恢复收集者续体的执行；
 
-1. emit
-   1. tryEmit:尝试发射数据，成功则返回
-   2. emitSuspend
-2. tryEmit
-   1. tryEmitLocked
-3. tryEmitLocked
-   1. tryEmitNoCollectorsLocked，当前没有指定收集者
-4. tryEmitNoCollectorsLocked
-   1. 当前不存在订阅者；
-   2. 无需保存历史数据；
-5. enqueueLocked
+#### collect
+``` kotlin
+override suspend fun collect(collector: FlowCollector<T>): Nothing {  
+    val slot = allocateSlot()  
+    try {  
+        if (collector is SubscribedFlowCollector) collector.onSubscription()  
+        val collectorJob = currentCoroutineContext()[Job]  
+        while (true) {  
+            var newValue: Any?  
+            while (true) {  
+                newValue = tryTakeValue(slot) 
+                if (newValue !== NO_VALUE) break  
+                awaitValue(slot)  
+            }  
+            collectorJob?.ensureActive()  
+            collector.emit(newValue as T)  
+        }  
+    } finally {  
+        freeSlot(slot)  
+    }  
+}
 
+protected fun allocateSlot(): S {  
+    val subscriptionCount: SubscriptionCountStateFlow?  
+    val slot = synchronized(this) {  
+        val slots = when (val curSlots = slots) {  
+            null -> createSlotArray(2).also { slots = it }  
+            else -> if (nCollectors >= curSlots.size) {  
+                curSlots.copyOf(2 * curSlots.size).also { slots = it }  
+            } else {  
+                curSlots  
+            }  
+        }  
+        var index = nextIndex  
+        var slot: S  
+        while (true) {  
+            slot = slots[index] ?: createSlot().also { slots[index] = it }  
+            index++  
+            if (index >= slots.size) index = 0  
+            if ((slot as AbstractSharedFlowSlot<Any>).allocateLocked(this)) //1 break   
+}  
+        nextIndex = index  
+        nCollectors++   //2
+        subscriptionCount = _subscriptionCount   
+        slot  
+    }  
+    subscriptionCount?.increment(1)  
+    return slot  
+}
+
+internal fun updateNewCollectorIndexLocked(): Long {  
+    val index = replayIndex  
+    if (index < minCollectorIndex) minCollectorIndex = index  
+    return index  
+}
+
+private fun tryTakeValue(slot: SharedFlowSlot): Any? {  
+    var resumes: Array<Continuation<Unit>?> = EMPTY_RESUMES  
+    val value = synchronized(this) {  
+        val index = tryPeekLocked(slot)  
+        if (index < 0) {  
+            NO_VALUE  
+        } else {  
+            val oldIndex = slot.index  
+            val newValue = getPeekedValueLockedAt(index)  
+            slot.index = index + 1 
+            resumes = updateCollectorIndexLocked(oldIndex)  
+            newValue  
+        }  
+    }  
+    for (resume in resumes) resume?.resume(Unit)  
+    return value  
+}
+
+private fun tryPeekLocked(slot: SharedFlowSlot): Long {  
+    val index = slot.index  
+    if (index < bufferEndIndex) return index  
+    if (bufferCapacity > 0) return -1L  
+    if (index > head) return -1L  
+    if (queueSize == 0) return -1L  
+    return index  
+}
+
+private fun getPeekedValueLockedAt(index: Long): Any? =  
+    when (val item = buffer!!.getBufferAt(index)) {  
+        is Emitter -> item.value  
+        else -> item  
+    }
+    
+private suspend fun awaitValue(slot: SharedFlowSlot): Unit = suspendCancellableCoroutine { cont ->  
+    synchronized(this) lock@{  
+        val index = tryPeekLocked(slot) // recheck under this lock  
+        if (index < 0) {  
+            slot.cont = cont // Ok -- suspending  
+        } else {  
+            cont.resume(Unit) // has value, no need to suspend  
+            return@lock  
+        }  
+        slot.cont = cont // suspend, waiting  
+    }  
+}
+```
+1. allocateSlot：创建 Slot 对象加入到 slot 数组
+	1. updateNewCollectorIndexLocked：指定回放起始索引，同时更新minCollectorIndex；
+	2. 更新收集器的数量（nCollectors++）
+2. tryTakeValue
+	1. tryPeekLocked：获取数据的索引，如果在缓存区内（index < bufferEndIndex），表示存在数据；
+	2. getPeekedValueLockedAt：获取指定索引的数据；
+3. awaitValue：没有找到数据，挂起等待，将当前协程续体保存到 slot 中；
+#### 总结
+1. 在 SharedFlow 中存在 2 个数组
+	1. 一个数组用于缓存数据和 Emitter 对象，其中 Emitter 对象封装了数据和当发射时所在协程的续体，是在挂起缓存策略下超过缓存容量的数据形式；
+	2. 另一个数组用于记录封装了当前收集者所在协程续体的 Slot 对象；
+2. 默认的的缓存策略是挂起，
+	1. 发射数据时
+		1. 首先检查是否有指定收集者，没有则根据回放容量大小，缓存最新数据；
+		2. 缓存数据操过容量同时收集者未能及时处理数据，执行挂起逻辑，创建 Emitter 对象 加入到缓存数组中；
+	2. 收集数据时
+		1. 创建 Slot 对象加入到Slot 数组中，根据回放索引从缓存数组中获取数据，获取失败则挂起等待。
 ## flowOn的实现
 
 ```kotlin

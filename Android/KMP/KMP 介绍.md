@@ -235,6 +235,8 @@ LayoutNode 非常智能，它会跟踪自身的绘制内容是否发生变化�
 8. [深入浅出 JetPack Compose UI 自动更新原理](https://blog.csdn.net/weixin_61845324/article/details/134268501)
 9. [Compose编程思想 -- 深入理解Compose原理](https://juejin.cn/post/7355307547479572521#heading-9)
 10. [开源一个企业可用的 Kotlin Multiplatform 项目模板](https://juejin.cn/post/7302338286768635956?searchId=202507292001582A7C0BD3C1624A8E74F1)
+11. [# Jetpack Compose · 重组的实现原理](https://mp.weixin.qq.com/s/0SgswfO6E7LdTUG9VIiV8Q?click_id=2)
+12. [# 深入理解 Jetpack Compose 内核：SlotTable 系统](https://blog.csdn.net/vitaviva/article/details/125478624)
 
 
 

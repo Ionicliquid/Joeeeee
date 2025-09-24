@@ -1,5 +1,4 @@
-## setContent 流程
-### setContent
+# setContent
 ```kotlin
 public fun ComponentActivity.setContent(  
     parent: CompositionContext? = null,  
@@ -41,7 +40,7 @@ fun setContent(content: @Composable () -> Unit) {
 }
 ```
 ComposeView#setContent 中将shouldCreateCompositionOnAttachedToWindow = true  ，当onAttachedToWindow 回调时，执行ensureCompositionCreated；
-### ensureCompositionCreated
+# ensureCompositionCreated
 ```kotlin
 private fun ensureCompositionCreated() {  
     if (composition == null) {  
@@ -385,4 +384,89 @@ private suspend fun recompositionRunner(
 }
 ```
 1. registerApplyObserver 注册applyObservers，当状态发生变化时 GlobalSnapshot 会通知此观察者；
-2. 
+# composing
+``` kotlin
+// Recomposer
+private inline fun <T> composing(  
+    composition: ControlledComposition,  
+    modifiedValues: MutableScatterSet<Any>?,  
+    block: () -> T  
+): T {  
+    val snapshot =  
+        Snapshot.takeMutableSnapshot(  
+            readObserverOf(composition),  
+            writeObserverOf(composition, modifiedValues)  
+        )  
+    try {  
+        return snapshot.enter(block)  
+    } finally {  
+        applyAndCheck(snapshot)  
+    }  
+}
+```
+1. 创建快照并在当前快照内进行组合，对当前快照发生的状态读写进行监听；
+## recordReadOf
+```kotlin
+// Recomposer
+private fun readObserverOf(composition: ControlledComposition): (Any) -> Unit {  
+    return { value -> composition.recordReadOf(value) }  
+}
+// CompositionImpl
+override fun recordReadOf(value: Any) {  
+    if (!areChildrenComposing) {  
+        composer.currentRecomposeScope?.let {  
+            it.used = true  
+            val alreadyRead = it.recordRead(value)  
+            if (!alreadyRead) {  
+                if (value is StateObjectImpl) {  
+                    value.recordReadIn(ReaderKind.Composition)  
+                }  
+  
+                observations.add(value, it)   
+                if (value is DerivedState<*>) {  
+                    val record = value.currentRecord  
+                    derivedStates.removeScope(value)  
+                    record.dependencies.forEachKey { dependency ->  
+                        if (dependency is StateObjectImpl) {  
+                            dependency.recordReadIn(ReaderKind.Composition)  
+                        }  
+                        derivedStates.add(dependency, value)  
+                    }  
+                    it.recordDerivedStateValue(value, record.currentValue)  
+                }  
+            }  
+        }  
+    }  
+}
+// Snapshot.kt
+fun <T : StateRecord> T.readable(state: StateObject): T {  
+    val snapshot = Snapshot.current  
+    snapshot.readObserver?.invoke(state)  
+    return readable(this, snapshot.snapshotId, snapshot.invalid)  
+        ?: sync {  
+            val syncSnapshot = Snapshot.current  
+            readable(state.firstStateRecord as T, syncSnapshot.snapshotId, syncSnapshot.invalid)  
+                ?: readError()  
+        }  
+}
+
+
+```
+1. value.recordReadIn 标记当前状态参与了组合，重组时用于判断是否需要修改；
+# Composable
+1. @Composable 修饰的函数经过编译后，会添加Composer和int类型的2个参数
+## startRestartGroup
+``` kotlin
+override fun startRestartGroup(key: Int): Composer {  
+    startReplaceGroup(key)  
+    addRecomposeScope()  
+    return this  
+}
+```
+1. startReplaceGroup: 插入Group到Group数组
+2. addRecomposeScope：插入RecomposeScopeImpl到Slot数组
+## updateScope
+``` kotlin
+override fun updateScope(block: (Composer, Int) -> Unit) { this.block = block }
+```
+1. 更新重组范围函数block，重组时会自动根据是否修改来决定调用此block函数
