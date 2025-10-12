@@ -1549,3 +1549,4 @@ public suspend inline fun <T> suspendCancellableCoroutine(
   - [IntrinsicsJvm.kt](https://github.com/JetBrains/kotlin/blob/master/libraries/stdlib/jvm/src/kotlin/coroutines/intrinsics/IntrinsicsJvm.kt)
 - [使用PlantUML绘制类图](https://juejin.cn/post/6844903731293585421?searchId=20241002214831CBFB639525066B7006C1)
 - [【kotlin】- delay函数实现原理](https://www.jianshu.com/p/2bcd6e21b496)
+- [Kotlin Flow 背压和线程切换竟然如此相似](https://juejin.cn/post/7172957388348063780)

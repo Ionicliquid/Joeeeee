@@ -21,6 +21,34 @@ KMP 生态在不断完善
 
 ![图片](https://mmbiz.qpic.cn/sz_mmbiz_png/RibZ8KwAStDNVbP5mkH9TKLec54rCM35vzlbgibSTZWfb0qJtep14VmXGfd2D3JlaxFrda5e5YeFZDVGrap6X6ZA/640?from=appmsg&randomid=m2yvriq9&tp=webp&wxfrom=5&wx_lazy=1)
 
+# MVI
+![[mvi.png]]
+
+### 核心思想：构建一个完全封闭和可预测的数据循环
+1. Model：表示 UI的状态（State），是唯一的数据源；
+2. View：Composable 函数，负责渲染 State，并将用户的操作转换为意图（Intent）;
+3.  Intent：用户的操作意图（如点击按钮、输入文本），它不会直接修改状态；
+### 优点
+1. 极度可预测：数据永远单向流动，状态来源清晰，调试非常方便；
+2. 唯一数据源：整个 UI 只依赖一个 State 对象，状态一致性得到保证
+3. 易于测试：可以独立测试ViewModel 逻辑：给定一个初始 State和一个 Intent，断言最终的 State 是否符合预期；
+## MVVM
+![[mvvm.png]]
+## 对比
+
+| 特性   | MVI                    | MVVM (在Compose中)               |
+| ---- | ---------------------- | ------------------------------ |
+| 数据流  | 严格单向 (Intent -> State) | 通常也是单向 (Event -> State)，但约束更松散 |
+| 状态管理 | 强制单一State对象            | 推荐单一State对象，但也可以暴露多个StateFlow  |
+| 核心理念 | 强调“意图”，用户行为驱动          | 强调“数据绑定”，状态驱动                  |
+| 官方推荐 | Google官方首推             | 广泛接受且完全兼容                      |
+| 适用场景 | 复杂状态管理、需要高可追溯性的页面      | 各种场景，尤其适合从传统View迁移的项目          |
+# 声明式 UI
+
+1. 你只需要描述 UI 在特定状态下应该是什么样子，而不需要关心它是如何从上一个状态变化过来的；
+2. 如何实现 Button点击，TextView 计数的功能
+	1. 在命令式 UI中，需要监听 Button的点击，修改 TextView 的显示
+	2. 而在声明式 UI 中，Button 点击修改状态，TextView 描述状态的关系，自动响应状态变化。
 
 ## 概览
 
@@ -78,151 +106,6 @@ UI 布局代码以一个计数器例子来举例说明每一帧绘制流程，�
 
   
 
-## 编译
-
-编译阶段目标是方便状态管理，将 UI 组合函数中植入一些串联管理组合函数的角色，方便进行 UI 构建和状态管理。
-开发阶段代码：
-``` kotlin
-@Composable  
-fun ConditionalUI(showProfile: Boolean) {  
-    Column {  
-        Text("Header")  
-        if (showProfile) {  
-            ProfileView() // 分支 A  
-        } else {  
-            LoginPrompt() // 分支 B  
-        }  
-        Text("Footer")  
-    }  
-}
-```
-
-
-编译之后伪代码：
-
-```kotlin
-fun ConditionalUI(showProfile: Boolean, $composer: Composer, $changed: Int) {  
-    // 1. 开始一个可重组的作用域 (Restart Group)  
-    //    这使得 ConditionalUI 自身可以被单独重组  
-    $composer.startRestartGroup(12345) // 12345 是一个编译器生成的唯一键  
-  
-    // 检查参数是否有变化，这是智能重组和跳过的关键  
-    // (这是一个简化的逻辑)  
-    val dirty = $changed  
-    if (dirty and0b1011 == 0b0010 && $composer.skipping) {  
-        $composer.skipToGroupEnd() // 如果参数未变且父级在跳过，则直接跳过整个函数  
-    } else {  
-        // 2. 调用 Column Composable  
-        //    注意，$composer 和 $changed 参数会被传递下去  
-        Column(modifier = ..., $composer, $changed, ...) {  
-  
-            // 3. 调用 Text("Header")  
-            //    由于 "Header" 是一个常量，编译器会标记它为静态，进一步优化  
-            Text("Header", $composer, 0b0110)  
-  
-            // 4. 【核心】处理 if/else 控制流  
-            //    编译器为 if 语句创建一个匿名组  
-            $composer.startGroup(67890) // 67890 是 if 语句的唯一键  
-            if (showProfile) {  
-                // 5. 为 if 的 true 分支创建一个组  
-                $composer.startGroup(22222)  
-                ProfileView($composer, 0)  
-                $composer.endGroup()  
-            } else {  
-                // 6. 为 if 的 false 分支创建一个组  
-                $composer.startGroup(33333)  
-                LoginPrompt($composer, 0)  
-                $composer.endGroup()  
-            }  
-            $composer.endGroup() // 结束 if 语句的组  
-  
-            // 7. 调用 Text("Footer")  
-            Text("Footer", $composer, 0b0110)  
-        }  
-    }  
-  
-    // 8. 结束可重组作用域，并提供一个用于重组的 lambda  
-    val scope = $composer.endRestartGroup()  
-    scope?.updateScope { nextComposer, force ->  
-        // 当需要重组时，这个 lambda 会被调用  
-        ConditionalUI(showProfile, nextComposer, $changed or0b1)  
-    }  
-}
-
-```
-
-  
-
-主要工作如下：
-
-- Composer 编译器会在 Compose 函数中增加 Composer 和 changed 参数，方便 Composer 来管理所有的 UI 层级和状态，Composer 会将这些信息写入 SlotTable
-- Key 的生成与作用：composer.startRestartGroup(key) 中的 key 至关重要。编译器会根据 Composable 在源码中的 位置 （行号、列号）生成一个在当前父函数中唯一的、稳定的整数 Key。当 if/else 或 when 导致某个 Composable 在下一次重组中“消失”时，Composer 正是依靠这个 Key 来识别出“哪个组不见了”，从而高效地从 SlotTable 中移除对应的节点，而不需要进行复杂的树比对。
-- $stable  标记 ：编译器会进行深入的类型分析。如果一个类的所有公共属性都是 val 且类型也是稳定的（基本类型、String、或也标记为 @Stable/@Immutable 的类），编译器会自动将其标记为“稳定”。在计算 changed 位图时，如果一个参数是稳定的且其实例引用没有变（===），Compose 就可以假定其内容也没有变，从而获得一个巨大的性能优化—— 直接跳过对该参数的深入比对 。
-- Lambda 的“记住”与重写：对于 Composable 中的 Lambda 表达式，尤其是事件回调（如 onClick），编译器会特殊处理。它会隐式地将 Lambda 包裹在一个 remember 调用中，并捕获其依赖的变量。例如：
-``` kotlin
-    var name by remember { mutableStateOf("World") }Button(onClick = { println("Hello, $name") }) { /*...*/ }
-```
-    onClick 这个 Lambda 依赖于 name。编译器会生成类似这样的代码：
-``` kotlin 
-// 伪代码
-val onClickLambda = remember(name) { { println("Hello, $name") } }  
-Button(onClick = onClickLambda, ...)
-```
- 这意味着，只有当 name 发生变化时，才会重新创建一个新的 Lambda 实例。如果 name 不变，Button 在重组时会收到一个完全相同的 Lambda 实例。由于 Function 类型在 Compose 中被认为是稳定的，这使得 Button 可以跳过重组，因为它所有的参数都没有变化。
-
-
-## 布局
-
-布局部分和具体的 UI 节点相关，不同平台实现大同小异不再冗余阐述。
-
-- 触发布局：一旦 LayoutNode 树被修改（无论是属性更新、插入、删除还是移动），这些被影响的节点及其父节点会被标记为“需要重新布局”。
-- 执行布局：布局阶段开始，Compose 会从被标记的最高层节点开始，重新测量和定位受影响的 LayoutNode。
-- 执行绘制：布局完成后，任何在屏幕上位置或外观发生变化的 LayoutNode 会被重新绘制到屏幕上。  
-## 绘制
-
-绘制阶段的核心思想是 录制 和 回放，将绘制指令录制到 RenderNode displayList 中，在 RenderThread 中完成回放，RenderThread 调用 Skia 转译指令绘制到 Vulkan
-![[绘制.png]]
-
-A RecordingCanvas
-
-LayoutNode 实际绘制过程中通过DrawScope 中调用 drawRect, drawLine 等方法时，并不是在操作一个传统的、立即生效的 Canvas。操作的是一个 RecordingCanvas（在底层是 RenderNode.beginRecording() 返回的 Canvas）。
-
-- 指令记录：这个 Canvas 对象所做的，仅仅是将的调用（drawRect）及其参数（颜色、尺寸、位置）序列化成一个绘图指令，并追加到 RenderNode 内部的 显示列表（Display List） 中。这个过程几乎没有 CPU 开销。
-    
-- 绘制阶段的产出：所以，整个绘制阶段的最终产出，不是屏幕上的像素，而是一棵 完成了绘图指令记录的   RenderNode   树 。
-    
-
-  
-
-B AndroidComposeView 
-
-  
-
-AndroidComposeView 是 Compose 世界与传统 Android View 世界的边界。它继承自 ViewGroup。它的核心职责之一是在合适的时机，将 Compose 产出的 RenderNode 树“嫁接”到 View 系统的 RenderNode 树上，并触发一次绘制。
-
-- attach  和   detach ：当 AndroidComposeView 被附加到窗口时 (onAttachedToWindow)，它会创建 Recomposer 并启动整个 Compose Runtime。当它分离时，会关闭 Recomposer 并释放资源。
-    
-- dispatchDraw：当 Android 的 View 绘制体系要求 AndroidComposeView 进行绘制时（调用其 dispatchDraw 方法），它并不执行传统的 onDraw。取而代之的是，它会调用一个内部方法，该方法将 Compose 的根 RenderNode 同步到 View 的渲染线程，即上一过程中录制好的 RenderNode 中更新好的 DisplayList。
-    
-
-  
-
-C 绘制缓存
-
-LayoutNode 非常智能，它会跟踪自身的绘制内容是否发生变化。如果一个 LayoutNode 只是移动了位置，而其内部内容（如背景色）没有变，它的 RenderNode 缓存就是有效的，不需要重新记录（beginRecording）。渲染线程只需要用新的变换矩阵（translationX/Y）重用这个 RenderNode 即可。
-
-  
-
-此外，Compose 会尽可能地 合并   RenderNode 。如果连续的几个 LayoutNode 都没有使用 graphicsLayer，它们的绘制指令会被记录到同一个父 RenderNode 中。这减少了 RenderNode 树的深度，降低了渲染引擎的管理开销，从而提升了性能。
-
-  
-
-通过对这些底层机制的深入理解，可以看到 Compose 并非简单的“状态变了就重画”。它是一个经过极致优化的、从编译器到渲染引擎端到端设计的精密系统，其核心哲学在于：通过在编译期和运行时收集尽可能多的信息，将更新的粒度降到最低。
-源码位置：
-
-![图片](https://mmbiz.qpic.cn/sz_mmbiz_png/RibZ8KwAStDNVbP5mkH9TKLec54rCM35vGKnpVGZhRX3VUoEjicFM7gR06Cj6vMaxrHC2WVVwe7JqdYGwVGJhcyQ/640?from=appmsg&randomid=6xweyttj&tp=webp&wxfrom=5&wx_lazy=1)
-
-
 
 # 参考链接
 1. [妈！Jetpack Compose太难学了，别怕，这里帮你理清几个概念](https://juejin.cn/post/7244420350753144891?searchId=202507052141214BE0E8888B9B55CE12B4#heading-8
@@ -235,8 +118,9 @@ LayoutNode 非常智能，它会跟踪自身的绘制内容是否发生变化�
 8. [深入浅出 JetPack Compose UI 自动更新原理](https://blog.csdn.net/weixin_61845324/article/details/134268501)
 9. [Compose编程思想 -- 深入理解Compose原理](https://juejin.cn/post/7355307547479572521#heading-9)
 10. [开源一个企业可用的 Kotlin Multiplatform 项目模板](https://juejin.cn/post/7302338286768635956?searchId=202507292001582A7C0BD3C1624A8E74F1)
-11. [# Jetpack Compose · 重组的实现原理](https://mp.weixin.qq.com/s/0SgswfO6E7LdTUG9VIiV8Q?click_id=2)
+11. [Compose · 重组的实现原理](https://mp.weixin.qq.com/s/0SgswfO6E7LdTUG9VIiV8Q?click_id=2)
 12. [# 深入理解 Jetpack Compose 内核：SlotTable 系统](https://blog.csdn.net/vitaviva/article/details/125478624)
+13. [# 19.2 Compose Recomposer启动流程分析](https://blog.csdn.net/datian1234/article/details/129042351)
 
 
 
