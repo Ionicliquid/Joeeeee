@@ -1,0 +1,7 @@
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-stretch: 100%;
+  src: url(https://fonts.gstatic.com/l/font?kit=zYXGKVElMYYaJe8bpLHnCwDKr932-G7dytD-Dmu1swZSAXcomDVmadSD6llzBaI5loe-6tLTNRfUo_5d2Q6VlAqU&skey=db4d85f0f9937532&v=v23) format('woff2');
+}

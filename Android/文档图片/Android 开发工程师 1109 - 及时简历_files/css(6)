@@ -1,0 +1,6 @@
+@font-face {
+  font-family: 'Playfair Display';
+  font-style: normal;
+  font-weight: 400;
+  src: url(https://fonts.gstatic.com/l/font?kit=nuFvD-vYSZviVYUb_rj3ij__anPXJzDwcbmjWBN2PKdFvUDVZNLo_EWrKUG0VviIEfKIFz9r0g&skey=f3b68f0152604ed9&v=v40) format('woff2');
+}
