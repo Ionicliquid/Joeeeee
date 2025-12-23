@@ -4,53 +4,24 @@
     "type": "split",
     "children": [
       {
-        "id": "9886762e42cf26d5",
+        "id": "a1c78088a184a5c9",
         "type": "tabs",
         "children": [
           {
-            "id": "94b8d081190d780a",
+            "id": "a97c6035d444c32b",
             "type": "leaf",
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Android/简历.md",
+                "file": "复习准备.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "简历"
-            }
-          },
-          {
-            "id": "6227b305bc5df8d6",
-            "type": "leaf",
-            "state": {
-              "type": "markdown",
-              "state": {
-                "file": "面试题.md",
-                "mode": "source",
-                "source": false
-              },
-              "icon": "lucide-file",
-              "title": "面试题"
-            }
-          },
-          {
-            "id": "755e3ec16fe1a3d5",
-            "type": "leaf",
-            "state": {
-              "type": "markdown",
-              "state": {
-                "file": "Android/KMP/Compose.md",
-                "mode": "source",
-                "source": false
-              },
-              "icon": "lucide-file",
-              "title": "Compose"
+              "title": "复习准备"
             }
           }
-        ],
-        "currentTab": 2
+        ]
       }
     ],
     "direction": "vertical"
@@ -171,13 +142,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Android/KMP/Compose.md",
+                "file": "复习准备.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Outline of Compose"
+              "title": "Outline of 复习准备"
             }
           },
           {
@@ -208,47 +179,36 @@
       "command-palette:Open command palette": false
     }
   },
-  "floating": {
-    "id": "d703f789e452dfcf",
-    "type": "floating",
-    "children": [
-      {
-        "id": "c4fd599de8782338",
-        "type": "window",
-        "children": [
-          {
-            "id": "e2c795bbc0a0f05a",
-            "type": "tabs",
-            "children": [
-              {
-                "id": "267f5927e36abf66",
-                "type": "leaf",
-                "state": {
-                  "type": "markdown",
-                  "state": {
-                    "file": "面试题.md",
-                    "mode": "source",
-                    "source": false
-                  },
-                  "icon": "lucide-file",
-                  "title": "面试题"
-                }
-              }
-            ]
-          }
-        ],
-        "direction": "vertical",
-        "x": 922,
-        "y": 31,
-        "width": 600,
-        "height": 1319,
-        "maximize": false,
-        "zoom": 0
-      }
-    ]
-  },
-  "active": "755e3ec16fe1a3d5",
+  "active": "a97c6035d444c32b",
   "lastOpenFiles": [
+    "Android/面试题回忆.md",
+    "Android/开源框架之Glide.md",
+    "Android/架构设计.md",
+    "Android/开源框架之插件化.md",
+    "Android/开源框架之Leakcanary与KOOM.md",
+    "Android/开源框架之okhttp.md",
+    "Android/设计模式.md",
+    "复习准备.md",
+    "Android/简历.md",
+    "Android/KMP/Compose.md",
+    "Android/开源框架之MMKV.md",
+    "面试题.md",
+    "Android/Leetcode/Top100.md",
+    "草稿.md",
+    "工作.md",
+    "Android/KMP/状态管理.md",
+    "2025-W50.md",
+    "2025-W49.md",
+    "总结.md",
+    "Android/KMP/测量.md",
+    "Android/DS面试题.md",
+    "Android/KMP/Jetpack Compose.md",
+    "Pasted image 20251122182858.png",
+    "2025年计划/2025-W46.md",
+    "Android/SharedFlow 的源码解读.md",
+    "Android/文档图片/SharedFlow_1.png",
+    "Android/Launcher之动画.md",
+    "Android/Launcher之动画 1.md",
     "Android/文档图片/Android 开发工程师 1109 - 及时简历.html",
     "Android/文档图片/Android 开发工程师 1109 - 及时简历_files/web",
     "Android/文档图片/Android 开发工程师 1109 - 及时简历_files/unnamed.png",
@@ -266,34 +226,6 @@
     "Android/文档图片/Android 开发工程师 1109 - 及时简历_files/leafish.jpg",
     "Android/文档图片/Android 开发工程师 1109 - 及时简历_files/kakuna.jpg",
     "Android/文档图片/Android 开发工程师 1109 - 及时简历_files/initialize-theme.js",
-    "Android/文档图片/Android 开发工程师 1109 - 及时简历_files/index-DLIF4m8v.css",
-    "Android/文档图片/Android 开发工程师 1109 - 及时简历_files/glalie.jpg",
-    "Android/文档图片/Android 开发工程师 1109 - 及时简历_files/gengar.jpg",
-    "Android/文档图片/Android 开发工程师 1109 - 及时简历_files/ditto.jpg",
-    "2025-W46.md",
-    "2025年计划/2025-W45：感冒+醉酒.md",
-    "Android/Leetcode/Top100.md",
-    "面试题.md",
-    "Android/KMP/Compose.md",
-    "Android/KMP/测量.md",
-    "Android/KMP/布局与绘制.md",
-    "Android/KMP/使用.md",
-    "Android/KMP/Composable 函数.md",
-    "Android/KMP/Jetpack Compose.md",
-    "Android/KMP/GapBuffer 算法.md",
-    "复习准备.md",
-    "Android/简历.md",
-    "2025年计划/2025-W44.md",
-    "2025年计划/2025-W43.md",
-    "2025年计划/2025-W42.md",
-    "Android/面试题回忆.md",
-    "Android/设计模式.md",
-    "Android/Launcher之动画.md",
-    "工作.md",
-    "总结.md",
-    "Android/KMP/KMP 介绍.md",
-    "如何访问隐藏的 API.md",
-    "随笔.md",
-    "未完成事项.md"
+    "Android/文档图片/Android 开发工程师 1109 - 及时简历_files/glalie.jpg"
   ]
 }
