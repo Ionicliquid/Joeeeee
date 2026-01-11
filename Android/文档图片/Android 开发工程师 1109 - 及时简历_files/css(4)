@@ -1,7 +1,0 @@
-@font-face {
-  font-family: 'Merriweather';
-  font-style: normal;
-  font-weight: 400;
-  font-stretch: 100%;
-  src: url(https://fonts.gstatic.com/l/font?kit=u-4D0qyriQwlOrhSvowK_l5UcA6zuSYEqOzpPe3HOZJ5eX1WtLaQwmYiScCmDxhtNOKl8yDr3icqFlf0KvTCYYXMNx3eJUorry8&skey=379c1eccf863c625&v=v33) format('woff2');
-}

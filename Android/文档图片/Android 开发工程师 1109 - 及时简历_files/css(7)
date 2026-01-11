@@ -1,6 +1,0 @@
-@font-face {
-  font-family: 'PT Sans';
-  font-style: normal;
-  font-weight: 400;
-  src: url(https://fonts.gstatic.com/l/font?kit=jizaRExUiTo99u79P0COwuGNGjI4q2Fn6jC6&skey=fd0b32f0f3e6a1fc&v=v18) format('woff2');
-}
