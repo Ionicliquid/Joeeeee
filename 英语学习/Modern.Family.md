@@ -4,62 +4,38 @@
 3. 观看一遍生肉视频 (检测学习效果)
 4. 笔记总结 (回顾知识点）
 5. 使用本课知识点造句 (学以致用，完成输出)
-6. 不必追求完全一致的发音，
+6. 模仿时不必追求完全一致的发音，
 # 特殊词汇
 ## Just
 ### 1. 表示 “只是、只不过”（弱化语气，强调单纯性）
-
 这是你之前句子里的用法，用来限定动作或想法的简单性，无额外深意。
-
 - 例句：I **just** want a cup of coffee.
-    
     译文：我**只是**想要一杯咖啡而已。
 - 例句：It’s **just** a mistake, don’t worry.
-    
     译文：这**只不过**是个失误，别担心。
-
 ### 2. 表示 “刚刚、刚才”（强调动作发生在不久前）
-
 用来描述过去很短时间内完成的动作，常和现在完成时或一般过去时连用。
-
 - 例句：She **just** left the office.
-    
     译文：她**刚刚**离开办公室。
 - 例句：I’ve **just** finished my homework.
-    
     译文：我**刚**写完作业。
-
 ### 3. 表示 “正好、恰好”（强调精准匹配）
-
 用来修饰时间、位置、数量等，指 “刚好符合预期”。
-
 - 例句：The bus arrived **just** on time.
-    
-    译文：公交车**正好**准时到站。
-- 例句：This shirt is **just** my size.
-    
-    译文：这件衬衫**恰好**是我的尺码。
-
+    译文：公交车正好准时到站。
+- 例句：This shirt is justmy size.
+    译文：这件衬衫恰好是我的尺码。
 ### 4. 表示 “就、简直”（加强语气，表达感叹）
-
 口语中用来强化情绪，比如惊讶、不满、赞叹等。
-
-- 例句：That’s **just** ridiculous!
-    
-    译文：这**简直**太荒谬了！
+- 例句：That’s just ridiculous!
+    译文：这简直太荒谬了！
 - 例句：It’s **just** perfect!
-    
     译文：这**简直**太完美了！
-
 ### 5. 用于祈使句，表 “就请、尽管”（委婉请求）
-
 放在句首，让请求的语气更温和自然。
-
 - 例句：**Just** give me five more minutes.
-    
     译文：**就**再给我五分钟吧。
 - 例句：**Just** tell me the truth.
-    
     译文：**尽管**跟我说实话。
 # 瑞秋的 100 个单词发音
 1. the 
@@ -102,6 +78,13 @@
 38. there 
 39. they‘re 
 40. what
+# 1
+## 没听懂
+1. We're in the middle of this.
+2. Are you trying to get rid of me?
+## 短语
+1. It doesn't make any sense to keep it.
+2. Heads up 注意
 # 2
 ## 没听懂
 1. Why would they ever get separated?
