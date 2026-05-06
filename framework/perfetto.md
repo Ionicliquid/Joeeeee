@@ -1,0 +1,2 @@
+1. 应用的`View.invalidate()`、动画、数据变化或输入事件触发会调用调—————— 申请 app 类型的 Vsync 信号；
+2. app 类型V-sync 信号到达后，唤醒等待中的 UI 线程，应用接收到app类型的V-sync信号，`Choroegrapher`回调`onVsync`开始一帧的绘制，依次处理Input事件，animation动画，performTraversals，其中traversal包含View的测量， 布局和绘制；
