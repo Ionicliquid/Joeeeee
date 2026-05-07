@@ -39,7 +39,7 @@
 1. 窗口分为 0～36 层，共 37 层；
 ## 应用窗口的添加流程
 - WMS首次添加Window时会构建一颗窗口层级树，层级分为 0～36 层，共 37 层，根节点为RootWindowContainer，第二层节点为DisplayContent，Activity为层级为TaskDisplayArea -> Task ->ActivityRecord -> Windowstate，其他窗口则为DisplayArea .Tokens ->WindowToken -> WindowState;
-- 当Activity进入onResume生命周期
+- 当Activity进入onResume生命周期后，创建ViewRootImpl，并在其performTraversel中完成对窗口add，relayout，draw和
 - `ActivityRecord` 作为 app token，早已在 `Task/TaskFragment` 层级中（例如 `TaskFragment.addChild(ActivityRecord)`）。
 - 所以最终层级是：`RootWindowContainer -> DisplayContent -> Task/TaskFragment -> ActivityRecord(WindowToken) -> WindowState`。
 - `addWindow` 完成加入后会更新焦点、输入窗口、层级分配；真正出图还要后续 `relayout`
@@ -52,7 +52,7 @@
 3. DefaultDisplay
 ### 面试
 1. Launcher判断是否需要处理 ActivityResult 后，获取ATMS的服务，启动Activity；
-2. ATMS解析Intent参数，进行权限校验， 通过过，创建 ActivityRecord和 Task 信息加入到根节点；
+2. ATMS解析Intent参数，进行权限校验， 通过后，创建 ActivityRecord和 Task 信息加入到根节点；
 3. 创建 Pause事务暂停 Launcher，同时通过socket请求zygote创建应用进程；
 4. zygote fork出子进程后，通过反射创建ActivityThread对象，同时执行其入口main方法；
 5. 在main方法中，启动应用的Binder服务ApplicationThread ，并返回给AMS，同时启动主线程Looper，开始消息循环；形成AMS -> ApplicationThread ->Handler通信链；
