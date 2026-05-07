@@ -1,0 +1,79 @@
+@startuml
+'https://plantuml.com/sequence-diagram
+
+class Workspace {
+CellInfo mDragInfo;
+}
+class CellInfo{
+val cell: View
+}
+class BubbleTextView
+interface DraggableView
+interface Reorderable
+abstract class DragController<T> {
+DragDriver mDragDriver;
+ArrayList<DragListener> mListeners;
+ArrayList<DropTarget> mDropTargets;
+{abstract} DragView startDrag(...)
+{abstract} void exitDrag()
+}
+interface EventListener {
+    {abstract} void onDriverDragMove(float x, float y);
+    {abstract} void onDriverDragExitWindow();
+    {abstract} void onDriverDragEnd(float x, float y);
+    {abstract} void onDriverDragCancel();
+}
+
+class LauncherDragController
+
+abstract class DragDriver {
+    EventListener mEventListener;
+    Consumer<MotionEvent> mSecondaryEventConsumer;
+    boolean onTouchEvent(MotionEvent ev)
+    boolean onInterceptTouchEvent(MotionEvent ev)
+    boolean onDragEvent(DragEvent event)
+}
+
+interface DragListener {
+    void onDragStart(DropTarget.DragObject dragObject, DragOptions options);
+    void onDragEnd();
+}
+
+interface TouchController {
+   {abstract} boolean onControllerTouchEvent(MotionEvent ev);
+   {abstract} boolean onControllerInterceptTouchEvent(MotionEvent ev);
+}
+class SystemDragDriver
+class InternalDragDriver
+
+interface DropTarget {
+    void onDrop(DragObject dragObject, DragOptions options);
+    void onDragEnter(DragObject dragObject);
+    void onDragOver(DragObject dragObject);
+    void onDragExit(DragObject dragObject);
+}
+
+class DragObject {
+DragView dragView;
+}
+
+interface DragSource {
+    void onDropCompleted(View target, DragObject d, boolean success);
+}
+BubbleTextView <-- CellInfo
+CellInfo <-- Workspace
+DraggableView <|.. BubbleTextView
+Reorderable <|.. BubbleTextView
+DragController o-- DragListener
+DragController o-- DropTarget
+DragDriver <-- DragController
+EventListener <-- DragDriver
+DragDriver <|-- SystemDragDriver
+DragDriver <|-- InternalDragDriver
+EventListener <|.. DragController
+TouchController <|.. DragController
+DragController <|-- LauncherDragController
+DragListener <|.. Workspace
+DropTarget <|.. Workspace
+DragSource <|.. Workspace
+@enduml

@@ -1,0 +1,37 @@
+@startuml
+'https://plantuml.com/sequence-diagram
+User -> ItemLongClickListener:onWorkspaceItemLongClick
+ItemLongClickListener -> ItemLongClickListener:beginDrag
+ItemLongClickListener -> Workspace:startDrag
+note right of Workspace: 实现DropTarget接口
+Workspace -> Workspace:beginDragShared
+Workspace -> DragController:startDrag
+DragController -> LauncherDragController:startDrag
+LauncherDragController -> DragController:handleMoveEvent
+DragLayer ->  DragController: onControllerTouchEvent
+DragController -> DragDriver :onTouchEvent
+DragDriver -> DragController:onDriverDragMove
+DragController -> DragController:handleMoveEvent
+DragController -> DragController: checkTouchMove
+DragController -> Workspace:onDragEnter
+
+DragController -> Workspace:onDragOver
+Workspace -> Workspace:onDragOver
+note left
+重复触发
+end note
+Workspace -> Workspace:findNearestArea
+Workspace -> Workspace: manageFolderFeedback
+note left
+组成/加入文件夹
+end note
+Workspace -> Workspace: manageReorderOnDragOver
+Workspace -> CellLayout :performReorder
+CellLayout -> CellLayout:calculateReorder
+CellLayout -> CellLayout:performReorder
+CellLayout -> CellLayout:animateItemsToSolution
+CellLayout -> CellLayout:beginOrAdjustReorderPreviewAnimations
+DragDriver -> DragController : onDriverDragEnd
+DragController -> DragController : onDrop
+DragController -> Workspace: onDrop
+@enduml

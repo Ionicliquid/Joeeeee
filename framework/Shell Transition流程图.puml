@@ -1,0 +1,42 @@
+@startuml
+'https://plantuml.com/sequence-diagram
+
+ActivityStarter -> ActivityStarter : executeRequest
+ActivityStarter -> TransitionController: createAndStartCollecting
+TransitionController -> TransitionController: moveToCollecting
+TransitionController -> Transition: startCollecting
+Transition -> BLASTSyncEngine: startSyncSet
+BLASTSyncEngine -> BLASTSyncEngine: prepareSyncSet
+ActivityStarter -> ActivityStarter:startActivityUnchecked
+ActivityStarter -> TransitionController:collect
+TransitionController -> Transition:collect
+ActivityStarter -> ActivityStarter: handleStartResult
+ActivityStarter -> TransitionController:requestStartTransition
+TransitionController -> TransitionPlayerImpl:requestStartTransition
+TransitionPlayerImpl -> Transitions: requestStartTransition
+Transitions -> Transitions:dispatchRequestWithTracing
+Transitions -> Transitions:dispatchRequest
+Transitions -> DefaultMixedHandler:handleRequest
+DefaultMixedHandler -> Transitions:dispatchRequest
+Transitions -> RemoteTransitionHandler: handleRequest
+Transitions -> ShellTaskOrganizer:startTransition
+ShellTaskOrganizer -> WindowOrganizerController:startTransition
+WindowOrganizerController -> Transition:start
+Transition -> Transition:applyReady
+BLASTSyncEngine -> BLASTSyncEngine:onSurfacePlacement
+BLASTSyncEngine -> SyncGroup:tryFinish
+SyncGroup -> SyncGroup:finishNow
+SyncGroup -> Transition:onTransactionReady
+Transition -> TransitionPlayerImpl:onTransitionReady
+TransitionPlayerImpl -> Transitions:onTransitionReady
+Transitions -> Transitions:dispatchReady
+Transitions -> Transitions:processReadyQueue
+Transitions -> Transitions:playTransitionWithTracing
+Transitions -> Transitions:playTransition
+Transitions -> DefaultMixedHandler:startAnimation
+DefaultMixedHandler -> DefaultMixedTransition:startAnimation
+DefaultMixedTransition -> DefaultMixedTransition:animateOpenIntentWithRemoteAndPipOrDesktop
+DefaultMixedTransition -> DefaultMixedTransition:tryAnimateOpenIntentWithRemoteAndPipOrDesktop
+DefaultMixedTransition -> RemoteTransitionHandler:startAnimation
+RemoteTransitionHandler -> IRemoteTransition:startAnimation
+@enduml

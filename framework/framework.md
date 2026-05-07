@@ -1,23 +1,24 @@
 # Shell Transition
-## 架构
+## 介绍启动动画
 1. WMCore：运行在system_server进程的模块
-	1. TransitionController：主要负责管理者整个过渡动画的生命周期，比如动画参与者收集，等待，启动等
-	2. Transition：具体过渡动画的实体类，它的主要生命周期包含collectiing，started ,playing,finished
+	1. TransitionController：主要负责管理者整个过渡动画的生命周期，比如动画参与者收集，等待，启动等;
+	2. Transition：具体过渡动画的实体类，它的主要生命周期包含收集中（collectiing），启动（started） ，播放中（playing），结束（finished)；
 2. WMShell: 运行在SystemUI进程的模块，其核心类包含
 	1. Transitions：主要负责相关过渡动画的具体播放相关逻辑
 	2. ActiveTransition：具体过渡动画的实体类
-
-3. 启动时，桌面构造 ActivityOptions 将RemoteTransition打包，其startAnimation方法需要接受leash给用于同步播放动画；
-4. ActivityStarter在启动对应Activity前，就会创建Transition，将状态置为collecting，同时初始化SyncGroup；
-	1. 对于启动动画来说，至少会先收集4个WindowContainer,也就是启动应用的ActivityRecord和Task,Launcher的ActivityRecord和壁纸；
-5. 之后通知Shell，完成ActiveTransition和TransitionHandler的初始化
-6. Transition进入启动状态，等待BlastSyncEngine回调窗口绘制完成的通知
-7. 之后回调Transition#onTransactionReady，进入播放状态，过滤对应WindowContainer，只保留Task信息，同时创建新的绘制树TransitionRoot，将对应Task挂载到该Root上；
+3. 启动应用时，Launcher会构造ActivityOptions将RemoteTransition打包，其startAnimation方法需要接受leash用于同步播放动画；
+4. ActivityStarter在启动对应Activity前，TransitionController就会创建Transition，将状态置为收集中，同时初始化SyncGroup；
+	- 对于启动动画来说，会收集4个WindowContainer，也就是启动应用的ActivityRecord和Task，Launcher的ActivityRecord和壁纸；
+5. 之后通知Shell，完成ActiveTransition和TransitionHandler的初始化，同时Transition进入启动状态；
+6. 等待BlastSyncEngine回调判断SyncGroup所有的窗口绘制完成，绘制完成回调Transition的onTransactionReady和Transitions的onTransitionReady的，进入播放状态；
+7. 获取ActivityOptions将RemoteTransition进行动画的播放，动画结束，回调finishCallback;
+8. 准备startTransaction 和finishTransaction 
+	1. startTransaction：过滤收集的WindowContainer，只保留Task信息，创建新的绘制树，将关联Task转移到新的根节点，统一播放；
+	2. finishTransaction ，动画结束后回调，将节点reparent到正常窗口树；
 
 ## Shell Transition流程
 1. TransitionController#createAndStartCollecting：创建Transition，状态置为STATE_COLLECTING；
 2. Transition.onTransactionReady: 状态置为STATE_PLAYING
-3. 分屏进入 ShellTransition 的流程？
 
 ## 收集
 1. Transition#mParticipants
@@ -36,8 +37,9 @@
 2. adb shell dumpsys window： dump window 信息
 ## 窗口层级
 1. 窗口分为 0～36 层，共 37 层；
-## 添加
-- `addWindow` 不负责创建/挂载 ActivityRecord 到 Task，它只把 `WindowState` 挂到已有的 `ActivityRecord`。
+## 应用窗口的添加流程
+- WMS首次添加Window时会构建一颗窗口层级树，层级分为 0～36 层，共 37 层，根节点为RootWindowContainer，第二层节点为DisplayContent，Activity为层级为TaskDisplayArea -> Task ->ActivityRecord -> Windowstate，其他窗口则为DisplayArea .Tokens ->WindowToken -> WindowState;
+- 当Activity进入onResume生命周期
 - `ActivityRecord` 作为 app token，早已在 `Task/TaskFragment` 层级中（例如 `TaskFragment.addChild(ActivityRecord)`）。
 - 所以最终层级是：`RootWindowContainer -> DisplayContent -> Task/TaskFragment -> ActivityRecord(WindowToken) -> WindowState`。
 - `addWindow` 完成加入后会更新焦点、输入窗口、层级分配；真正出图还要后续 `relayout`

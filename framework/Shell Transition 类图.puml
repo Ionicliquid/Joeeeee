@@ -1,0 +1,58 @@
+@startuml
+'https://plantuml.com/sequence-diagram
+
+class WindowToken
+class WindowContainer<T> {
+TransitionController mTransitionController
+}
+class Transition {
+BLASTSyncEngine mSyncEngine;
+}
+class TransitionController {
+BLASTSyncEngine mSyncEngine
+Transition createAndStartCollecting(int type)
+}
+BLASTSyncEngine <-- Transition
+TransitionController <-- WindowContainer
+WindowContainer <|-- WindowToken
+class ActivityRecord
+WindowToken <|-- ActivityRecord
+class BLASTSyncEngine{
+ArrayList<SyncGroup> mActiveSyncs
+}
+
+class DefaultMixedHandler
+interface MixedTransitionHandler
+interface TransitionHandler {
+WindowContainerTransaction handleRequest(IBinder transition,TransitionRequestInfo request);
+}
+class RemoteTransitionHandler
+MixedTransitionHandler <|.. DefaultMixedHandler
+TransitionHandler <|.. MixedTransitionHandler
+TransitionHandler <|.. RemoteTransitionHandler
+class Transitions {
+ArrayList<ActiveTransition> mPendingTransitions
+ArrayList<TransitionHandler> mHandlers
+}
+Transitions o-- TransitionHandler
+
+class SyncGroup {
+ArraySet<WindowContainer> mRootMembers
+}
+class ActivityRecord
+class WindowToken
+class WindowState
+class ActiveTransition {
+TransitionHandler mHandler;
+TransitionInfo mInfo;
+Transaction mStartT;
+Transaction mFinishT;
+}
+BLASTSyncEngine o-- SyncGroup
+SyncGroup o-- WindowContainer
+class Task
+class TaskFragment
+WindowContainer <|-- TaskFragment
+TaskFragment <|-- Task
+WindowContainer <|-- WindowState
+@enduml
