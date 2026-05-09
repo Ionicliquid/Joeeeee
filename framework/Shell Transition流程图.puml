@@ -5,11 +5,13 @@ ActivityStarter -> ActivityStarter : executeRequest
 ActivityStarter -> TransitionController: createAndStartCollecting
 TransitionController -> TransitionController: moveToCollecting
 TransitionController -> Transition: startCollecting
+note right : mState = STATE_COLLECTING;
 Transition -> BLASTSyncEngine: startSyncSet
 BLASTSyncEngine -> BLASTSyncEngine: prepareSyncSet
 ActivityStarter -> ActivityStarter:startActivityUnchecked
 ActivityStarter -> TransitionController:collect
 TransitionController -> Transition:collect
+
 ActivityStarter -> ActivityStarter: handleStartResult
 ActivityStarter -> TransitionController:requestStartTransition
 TransitionController -> TransitionPlayerImpl:requestStartTransition
@@ -22,11 +24,13 @@ Transitions -> RemoteTransitionHandler: handleRequest
 Transitions -> ShellTaskOrganizer:startTransition
 ShellTaskOrganizer -> WindowOrganizerController:startTransition
 WindowOrganizerController -> Transition:start
+note left : mState = STATE_STARTED
 Transition -> Transition:applyReady
 BLASTSyncEngine -> BLASTSyncEngine:onSurfacePlacement
 BLASTSyncEngine -> SyncGroup:tryFinish
 SyncGroup -> SyncGroup:finishNow
 SyncGroup -> Transition:onTransactionReady
+note left:mState = STATE_PLAYING
 Transition -> TransitionPlayerImpl:onTransitionReady
 TransitionPlayerImpl -> Transitions:onTransitionReady
 Transitions -> Transitions:dispatchReady
