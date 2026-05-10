@@ -6,9 +6,9 @@
 2. WMShell: 运行在SystemUI进程的模块，其核心类包含
 	1. Transitions：主要负责相关过渡动画的具体播放相关逻辑
 	2. ActiveTransition：具体过渡动画的实体类
-3. 启动应用时，Launcher会构造ActivityOptions将RemoteTransition打包，其startAnimation方法需要接受leash用于同步播放动画；
+3. 启动应用时，Launcher会构造ActivityOptions将RemoteTransition打包，RemoteTransition实现startAnimation方法接受leash用于同步播放窗口动画；
 4. ActivityStarter在启动对应Activity前，TransitionController就会创建Transition，将状态置为收集中，同时初始化SyncGroup；
-	- 对于启动动画来说，会收集4个WindowContainer，也就是启动应用的ActivityRecord和Task，Launcher的ActivityRecord和壁纸；
+	- 对于启动动画来说，会收集4个WindowContainer，也就是应用的ActivityRecord和Task，Launcher的ActivityRecord和壁纸，同时也会将 StartingWindow 加入到 ActivityRecord中，跟随 ActivityRecord 的Surface 一起动画；
 5. 之后通知Shell，完成ActiveTransition和TransitionHandler的初始化，同时Transition进入启动状态；
 6. SplashScreen Surface 随 ActivityRecord 的 Surface 层级 一起运动
 7. 等待BlastSyncEngine回调判断SyncGroup所有的窗口绘制完成，绘制完成回调Transition的onTransactionReady和Transitions的onTransitionReady的，进入播放状态；
@@ -94,3 +94,8 @@
 
 ## WindowContainer
 包含 SurfaceControl
+
+# 其他
+
+1. adb shell dumpsys window windows > /Users/joee/Documents/Joeeeee/framework/window.txt
+2. adb shell dumpsys activity containers > /Users/joee/Documents/Joeeeee/frameworkcontainers.txt
