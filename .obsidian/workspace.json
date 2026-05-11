@@ -4,11 +4,11 @@
     "type": "split",
     "children": [
       {
-        "id": "1f4ff9843c3626d9",
+        "id": "6bebb1c5f61bf3b7",
         "type": "tabs",
         "children": [
           {
-            "id": "5baa26db742329c1",
+            "id": "b740be227886dbb4",
             "type": "leaf",
             "state": {
               "type": "markdown",
@@ -164,16 +164,6 @@
               "icon": "lucide-file",
               "title": "口语 9000 句"
             }
-          },
-          {
-            "id": "459e9b368d478087",
-            "type": "leaf",
-            "state": {
-              "type": "calendar",
-              "state": {},
-              "icon": "calendar-with-checkmark",
-              "title": "Calendar"
-            }
           }
         ],
         "currentTab": 3
@@ -193,31 +183,31 @@
       "bases:新建数据库": false
     }
   },
-  "active": "5baa26db742329c1",
+  "active": "b740be227886dbb4",
   "lastOpenFiles": [
-    "framework/perfetto.md",
-    "framework/framework.md",
-    "framework/containers.txt",
     "framework/window.txt",
+    "framework/containers.txt",
+    "补充.md",
+    "framework/framework.md",
     "教学文档.md",
-    "总结.md",
-    "framework/总结.md",
-    "2026年计划/W15-W29：100 天.md",
-    "面试/简历.md",
-    "面试/复习准备.md",
-    "其他/随笔.md",
     "其他/工作.md",
+    "其他/随笔.md",
+    "framework/perfetto.md",
+    "framework/总结.md",
+    "面试/复习准备.md",
+    "总结.md",
+    "应用的启动动画工作流程.md",
     "framework/桌面拖拽.puml",
     "framework/拖拽流程图.puml",
     "framework/Shell Transition流程图.puml",
     "framework/Shell Transition 类图.puml",
-    "学习技巧/费曼学习法.md",
-    "补充.md",
+    "工作.md",
     "面试/Top100.md",
     "2026年计划/2026 年计划.md",
     "2026年计划/2026-W07：混.md",
     "2026年计划/2026-W08：过年.md",
     "2026年计划/W09～W14(2.24~4.5) 42 天计划.md",
+    "2026年计划/W15-W29：100 天.md",
     "2024计划/2024计划.md",
     "随笔.md",
     "framework",
@@ -239,6 +229,7 @@
     "Pasted image 20251122182858.png",
     "2026年计划",
     "Android/文档图片/SharedFlow_1.png",
+    "Android/文档图片/Android 开发工程师 1109 - 及时简历.html",
     "Android/文档图片/Android 开发工程师 1109 - 及时简历_files/unnamed.png"
   ]
 }

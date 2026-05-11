@@ -31,6 +31,12 @@ BLASTSyncEngine -> SyncGroup:tryFinish
 SyncGroup -> SyncGroup:finishNow
 SyncGroup -> Transition:onTransactionReady
 note left:mState = STATE_PLAYING
+Transition -> Transition:calculateTargets
+Transition -> Transition:calculateTransitionInfo
+Transition -> Transition:calculateTransitionRoots
+note left: 新建leashRoot，将参与动画的Task挂载到此leash下
+Transition -> Transition: buildFinishTransaction
+note left: 构造finishTransaction 恢复原先的Task结构
 Transition -> TransitionPlayerImpl:onTransitionReady
 TransitionPlayerImpl -> Transitions:onTransitionReady
 Transitions -> Transitions:dispatchReady
