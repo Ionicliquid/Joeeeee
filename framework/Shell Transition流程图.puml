@@ -33,6 +33,7 @@ SyncGroup -> Transition:onTransactionReady
 note left:mState = STATE_PLAYING
 Transition -> Transition:calculateTargets
 Transition -> Transition:calculateTransitionInfo
+note left:change的数量？
 Transition -> Transition:calculateTransitionRoots
 note left: 新建leashRoot，将参与动画的Task挂载到此leash下
 Transition -> Transition: buildFinishTransaction
@@ -40,9 +41,13 @@ note left: 构造finishTransaction 恢复原先的Task结构
 Transition -> TransitionPlayerImpl:onTransitionReady
 TransitionPlayerImpl -> Transitions:onTransitionReady
 Transitions -> Transitions:dispatchReady
+Transitions -> Transitions: setupStartState
+note left: 设置leash状态:start 显示对应应用/finish隐藏 Home
 Transitions -> Transitions:processReadyQueue
 Transitions -> Transitions:playTransitionWithTracing
 Transitions -> Transitions:playTransition
+Transitions -> Transitions: setupAnimHierarchy
+note left : 设置 layer z轴层级:启动应用>Home
 Transitions -> DefaultMixedHandler:startAnimation
 DefaultMixedHandler -> DefaultMixedTransition:startAnimation
 DefaultMixedTransition -> DefaultMixedTransition:animateOpenIntentWithRemoteAndPipOrDesktop
