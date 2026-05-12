@@ -1,7 +1,8 @@
 @startuml
 'https://plantuml.com/sequence-diagram
-
-ActivityStarter -> ActivityStarter : executeRequest
+QuickStepLauncher -> ActivityContext:startActivitySafely
+ActivityContext -> QuickstepTransitionManager:getActivityLaunchOptions
+QuickStepLauncher -> ActivityStarter : executeRequest
 ActivityStarter -> TransitionController: createAndStartCollecting
 TransitionController -> TransitionController: moveToCollecting
 TransitionController -> Transition: startCollecting
@@ -53,5 +54,9 @@ DefaultMixedHandler -> DefaultMixedTransition:startAnimation
 DefaultMixedTransition -> DefaultMixedTransition:animateOpenIntentWithRemoteAndPipOrDesktop
 DefaultMixedTransition -> DefaultMixedTransition:tryAnimateOpenIntentWithRemoteAndPipOrDesktop
 DefaultMixedTransition -> RemoteTransitionHandler:startAnimation
-RemoteTransitionHandler -> IRemoteTransition:startAnimation
+RemoteTransitionHandler -> RemoteTransition:getRemoteTransition
+RemoteTransition -> IRemoteTransition: startAnimation
+IRemoteTransition -> RemoteTransitionStub:startAnimation
+RemoteTransitionStub -> LauncherAnimationRunner: onAnimationStart
+LauncherAnimationRunner -> QuickstepTransitionManager:composeIconLaunchAnimator
 @enduml

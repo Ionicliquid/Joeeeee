@@ -10,7 +10,7 @@
 4. ActivityStarter在启动对应Activity前，TransitionController就会创建Transition，将状态置为收集中，同时初始化SyncGroup；
 	- 对于启动动画来说，会收集4个WindowContainer，也就是应用的ActivityRecord和Task，Launcher的ActivityRecord和壁纸，同时也会将 StartingWindow 加入到 应用的ActivityRecord中，跟随 ActivityRecord 的Surface 一起动画；
 5. 之后通知Shell，完成ActiveTransition和TransitionHandler的初始化，同时Transition进入启动状态；
-6. 等待BlastSyncEngine回调判断SyncGroup所有的窗口绘制完成，对于StartingWindow已经是完成绘制状态，可以直接返回，绘制完成回调Transition的onTransactionReady和Transitions的onTransitionReady的，进入播放状态；
+6. 等待WMS回调BlastSyncEngine判断SyncGroup中所有窗口的Surface已经完成摆放，回调core的onTransactionReady和shell的onTransitionReady，进入播放状态；
 7. 获取ActivityOptions将RemoteTransition进行动画的播放，动画结束，回调finishCallback;
 8. 准备startTransaction 和finishTransaction 
 	1. startTransaction：过滤收集的WindowContainer，只保留Task信息，创建新的绘制树，将关联Task转移到新的根节点，统一播放；
