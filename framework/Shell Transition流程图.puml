@@ -2,7 +2,10 @@
 'https://plantuml.com/sequence-diagram
 QuickStepLauncher -> ActivityContext:startActivitySafely
 ActivityContext -> QuickstepTransitionManager:getActivityLaunchOptions
-QuickStepLauncher -> ActivityStarter : executeRequest
+QuickStepLauncher -> Instrumentation:execStartActivity
+Instrumentation -> ATMS:startActivity
+ATMS -> ActivityStarter : executeRequest
+note left: 构造ActivityRecord
 ActivityStarter -> TransitionController: createAndStartCollecting
 TransitionController -> TransitionController: moveToCollecting
 TransitionController -> Transition: startCollecting
@@ -11,8 +14,12 @@ Transition -> BLASTSyncEngine: startSyncSet
 BLASTSyncEngine -> BLASTSyncEngine: prepareSyncSet
 ActivityStarter -> ActivityStarter:startActivityUnchecked
 ActivityStarter -> TransitionController:collect
+note left: 收集当前ActivityRecord
 TransitionController -> Transition:collect
-
+ActivityStarter -> ActivityStarter: startActivityInner
+note left: 新建Task
+ActivityStarter -> Task : startActivityLocked
+note left: 将StartingWindow加入到当前ActivityRecord中
 ActivityStarter -> ActivityStarter: handleStartResult
 ActivityStarter -> TransitionController:requestStartTransition
 TransitionController -> TransitionPlayerImpl:requestStartTransition
