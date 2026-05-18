@@ -1,0 +1,65 @@
+@startuml
+'https://plantuml.com/sequence-diagram
+
+autonumber
+ActivityThread -> ActivityThread:handleResumeActivity
+ActivityThread -> WindowManagerImpl : addView
+WindowManagerImpl -> WindowManagerGlobal:addView
+WindowManagerGlobal -> ViewRootImpl:setView
+ViewRootImpl -> IWindowSession:addToDisplayAsUser
+note left:IWindowSession session = WMS.openSession()
+IWindowSession -> WMS: addWindow
+WMS -> WindowState:new
+WMS -> WMS:addWindowInner
+WMS -> WindowToken:addWindow
+note left: 应用窗口WindowState的 Token 为 ActivityRecord
+ViewRootImpl -> ViewRootImpl : requestLayout
+ViewRootImpl -> ViewRootImpl:performTraversals
+ViewRootImpl -> ViewRootImpl: relayoutWindow
+ViewRootImpl -> IWindowSession:relayout
+IWindowSession -> WMS:relayoutWindow
+WMS-> WMS:createSurfaceControl
+WMS -> WindowStateAnimator:createSurfaceLocked
+note left:创建应用窗口对应的 SurfaceControl,同时将它拷贝到 ViewRootImpl中
+WindowStateAnimator -> WindowStateAnimator:resetDrawState
+note left: mDrawState = DRAW_PENDING
+WMS -> WindowSurfacePlacer:performSurfacePlacement
+ViewRootImpl -> ViewRootImpl:createSyncIfNeeded
+ViewRootImpl -> SurfaceSyncGroup:new
+note left : 初始化mWmsRequestSyncGroup并添加绘制完成的回调
+ViewRootImpl -> SurfaceSyncGroup:add
+note left: 将mWmsRequestSyncGroup与mActiveSurfaceSyncGroup绑定
+ViewRootImpl -> ViewRootImpl:performDraw
+ViewRootImpl -> ViewRootImpl:registerCallbacksForSync
+note left: 初始化mActiveSurfaceSyncGroup绘制完成的回调
+ViewRootImpl ->ViewRootImpl:draw
+ViewRootImpl -> ThreadedRenderer: draw
+ThreadedRenderer -> SurfaceSyncGroup:markSyncReady
+note left : 绘制完成先通知mActiveSurfaceSyncGroup再通知mWmsRequestSyncGroup
+SurfaceSyncGroup -> ViewRootImpl:reportDrawFinished
+ViewRootImpl -> IWindowSession:finishDrawing
+IWindowSession -> WMS:finishDrawingWindow
+WMS -> WindowState: finishDrawing
+WindowState -> WindowStateAnimator:finishDrawingLocked
+note right: mDrawState = COMMIT_DRAW_PENDING;
+WMS -> WindowSurfacePlacer:requestTraversal
+WindowSurfacePlacer -> WindowSurfacePlacer:performSurfacePlacement
+WindowSurfacePlacer -> WindowSurfacePlacer: performSurfacePlacementLoop
+WindowSurfacePlacer -> RootWindowContainer:performSurfacePlacement
+RootWindowContainer -> RootWindowContainer:applySurfaceChangesTransaction
+RootWindowContainer -> DisplayContent:applySurfaceChangesTransaction
+DisplayContent -> DisplayContent: forAllWindows
+DisplayContent -> WindowStateAnimator:commitFinishDrawingLocked
+note left : mDrawState = READY_TO_SHOW;
+WindowStateAnimator -> WindowState:performShowLocked
+note right:mDrawState = HAS_DRAWN
+RootWindowContainer -> BLASTSyncEngine : onSurfacePlacement
+BLASTSyncEngine -> SyncGroup : tryFinish
+SyncGroup -> SyncGroup: finishNow
+SyncGroup -> WindowContainer: finishSync
+note left: 合并应用的transaction到 merge
+SyncGroup -> Transaction:addTransactionCommittedListener
+note left: 注册 commit回调，准备合并应用的下一帧 transaction
+WindowContainer -> TransactionReadyListener: onTransactionReady
+note left: 启动应用中由Transition控制 apply
+@enduml

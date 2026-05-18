@@ -45,7 +45,79 @@
 - `addWindow` 完成加入后会更新焦点、输入窗口、层级分配；真正出图还要后续 `relayout`
 ## 绘制
 1. mDrawState 的 5 个状态
+## ThreadedRenderer 绘制 View 内容的流程
 
+整个管线分为两个阶段：**录制阶段**（UI 线程）和**渲染阶段**（Render 线程）。
+
+### 1. 入口：`ThreadedRenderer.draw()`
+
+由 `ViewRootImpl.performDraw()` 调用 → [ThreadedRenderer.java:828](vscode-webview://0ehv9b7aq8bm0bkh8crpv71gesmvhg8egl0k1jo51it32i693gcf/core/java/android/view/ThreadedRenderer.java#L828)。
+
+```java
+void draw(View view, AttachInfo attachInfo, DrawCallbacks callbacks) {
+    updateRootDisplayList(view, callbacks);   // 阶段1: 录制
+    syncAndDrawFrame(frameInfo);              // 阶段2: 渲染
+}
+```
+
+### 2. 录制阶段：将 View 树录制为 DisplayList（RenderNode 树）
+
+`updateRootDisplayList()` → [ThreadedRenderer.java:731](vscode-webview://0ehv9b7aq8bm0bkh8crpv71gesmvhg8egl0k1jo51it32i693gcf/core/java/android/view/ThreadedRenderer.java#L731) 做两件事：
+
+**a) 递归更新每个 View 的 DisplayList**
+
+调用 `view.updateDisplayListIfDirty()` → [View.java:24064](vscode-webview://0ehv9b7aq8bm0bkh8crpv71gesmvhg8egl0k1jo51it32i693gcf/core/java/android/view/View.java#L24064)，该方法：
+
+- 在 View 自己的 `RenderNode` 上打开一个 `RecordingCanvas`
+- 调用 `view.draw(canvas)` → [View.java:25251](vscode-webview://0ehv9b7aq8bm0bkh8crpv71gesmvhg8egl0k1jo51it32i693gcf/core/java/android/view/View.java#L25251)，执行经典的 7 步绘制：
+    1. `drawBackground()` — 绘制背景
+    2. 保存 layer（用于 fading edges）
+    3. `onDraw()` — 绘制自身内容
+    4. `dispatchDraw()` — 绘制子 View
+    5. 恢复 layer / 绘制 fading edges
+    6. `onDrawForeground()` — 前景、滚动条等
+    7. `drawDefaultFocusHighlight()` — 焦点高亮
+- `renderNode.endRecording()` 封存录制
+
+`RecordingCanvas` 不会真正画像素，而是把绘制命令（drawRect, drawText, drawRenderNode 等）记录为 GPU 可重放的指令流。
+
+**b) 将根 View 的 RenderNode 挂到根 RenderNode 上**
+
+```java
+mRootNode.beginRecording(surfaceW, surfaceH);
+canvas.drawRenderNode(view.updateDisplayListIfDirty());  // 将 View 的 RenderNode 链入
+mRootNode.endRecording();
+```
+
+这里的 `drawRenderNode()` → [RecordingCanvas.java:179](vscode-webview://0ehv9b7aq8bm0bkh8crpv71gesmvhg8egl0k1jo51it32i693gcf/graphics/java/android/graphics/RecordingCanvas.java#L179) 只是记录一条「引用子 RenderNode」的指令，不实际绘制。
+
+### 3. 渲染阶段：GPU 光栅化
+
+`syncAndDrawFrame()` → [HardwareRenderer.java:554](vscode-webview://0ehv9b7aq8bm0bkh8crpv71gesmvhg8egl0k1jo51it32i693gcf/graphics/java/android/graphics/HardwareRenderer.java#L554) 是 native JNI 调用，将 RenderNode 树从 UI 线程交给 Render 线程：
+
+```
+nSyncAndDrawFrame (native)
+  ├── 同步 RenderNode 树到 Render 线程
+  ├── Render 线程重放 DisplayList 指令到 OpenGL/Skia GPU 上下文
+  └── 交换 buffer 到 Surface（显示到屏幕）
+```
+
+### 总结：两条流水线
+
+```
+UI 线程 (录制)                      Render 线程 (渲染)
+─────────────────                   ─────────────────
+View.draw(RecordingCanvas)          
+  → 记录绘制命令到 RenderNode
+                                    syncAndDrawFrame()
+                                      → GPU 重放指令
+                                      → 光栅化像素
+                                      → buffer swap 到屏幕
+```
+
+核心设计思想：**UI 线程只录制指令（DisplayList），不碰 GPU；Render 线程离线重放指令做真正的光栅化**。这样 UI 线程不会阻塞在 GPU 上，也能利用 Render 线程做并行渲染。
+
+`RecordingCanvas` 不会真正画像素，而是把绘制命令（drawRect, drawText, drawRenderNode 等）记录为 GPU 可重放的指令流。
 ## Activity的启动流程
 1. Launcher onPause 与 realStartActivity
 2. dump activity container :层级树分析
@@ -65,11 +137,9 @@
 2. dump window
 3. 应用窗口如何被添加到层级树上？
 # SurfaceFlinger
-## SurfaceControl
-是Layer 的 Java 代理句柄，每个 SurfaceControl 对应 SurfaceFlinger 中的一个 Layer，管理该 Layer 的所有显示元数据（位置、Z 序、透明度、裁剪、缩放、旋转、可见性）。通过`layer_state_t`结构体进行描述；
-## Transaction
-1. 是一个独立的事务对象，保存 layer_state_t 集合，用于操作一个或多个 SurfaceControl 的属性；
-2. merge 时以other 为准；
+
+## fence
+
 ## perfetto 
 1. 抓取命令
 ## V-sync
@@ -83,11 +153,15 @@
 5. 渲染线程通过queueBuffer唤醒对端的SurfaceFlinger进程中的Binder工作线程，申请sf类型的vsync信号；
 6. sf类型的VSYNC信号到达后后，sf开始执行一帧的合成任务，之后再执行present唤醒HWC service进程执行图层合成送显；
 # 重要类
-## SurfaceControl
 
-## SurfaceControl.Transaction
-1. reparent(sc, newParent)： 重新设置父图层，子图层**所有属性会继承、跟随父图层**，由父层统一约束。
-2. setLayer(sc, z)：设置 Z 轴层级（越大越上层）
+## SurfaceControl
+是Layer 的 Java 代理句柄，每个 SurfaceControl 对应 SurfaceFlinger 中的一个 Layer，管理该 Layer 的所有显示元数据（位置、Z 序、透明度、裁剪、缩放、旋转、可见性）。通过`layer_state_t`结构体进行描述；
+## Transaction
+1. 是一个独立的事务对象，保存 layer_state_t 集合，用于操作一个或多个 SurfaceControl 的属性；
+2. merge 时以other 为准；
+3. reparent(sc, newParent)： 重新设置父图层，子图层**所有属性会继承、跟随父图层**，由父层统一约束。
+4. setLayer(sc, z)：设置 Z 轴层级（越大越上层）
+
 ## SurfaceFlinger
 底层合成，接收 Shell 的 Surface 事务，硬件加速执行，保证帧同步（VSYNC）。
 
