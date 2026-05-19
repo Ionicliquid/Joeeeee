@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "补充.md",
+                "file": "2026年计划/2026-W21.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "补充"
+              "title": "2026-W21"
             }
           }
         ]
@@ -142,13 +142,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "framework/framework.md",
+                "file": "2026年计划/2026-W21.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "framework 的大纲"
+              "title": "2026-W21 的大纲"
             }
           },
           {
@@ -232,8 +232,9 @@
       }
     ]
   },
-  "active": "5baa26db742329c1",
+  "active": "1aded366875e3368",
   "lastOpenFiles": [
+    "2026年计划/W15-W29：100 天.md",
     "补充.md",
     "framework/framework.md",
     "framework/总结.md",
@@ -243,7 +244,6 @@
     "framework/Pasted image 20260428105118.png",
     "2026年计划/2026-W21.md",
     "2026年计划/W09～W14(2.24~4.5) 42 天计划.md",
-    "2026年计划/W15-W29：100 天.md",
     "学习技巧/如何复述故事.md",
     "学习技巧/复盘.md",
     "学习技巧/复盘方法-2.md",
