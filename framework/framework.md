@@ -25,18 +25,15 @@
 ![[Pasted image 20260428105118.png]]
 2. Transition#mTargets
 ![[Pasted image 20260428143414.png]]
-## 流程
-1. 启动时，桌面构造 ActivityOptions 将RemoteTransition打包，其startAnimation方法会传递leash给桌面播放动画；
-2. ActivityStarter启动对应Activity前，会创建Transition，将状态置为COLLECTING，同时初始化SyncGroup；
-3. Transition通过一个集合保存要收集WindowState对象，一次启动Activity，会收集ActivityRecord,Task，壁纸对应的WindowState;
-4. 当BlastBufferQueue
-## 闪屏/Winscope
+
+## 闪屏/winscope
 1. RelativeLayer/zorder
 # WMS/AMS
 1. adb shell dumpsys activity containers： dump 窗口层级树；
 2. adb shell dumpsys window： dump window 信息
 ## 窗口层级
 1. 窗口分为 0～36 层，共 37 层；
+2. RootWindowContainer → DisplayContent → DisplayArea → Task → ActivityRecord(WindowToken) → WindowState
 ## 应用窗口的添加流程
 - WMS首次添加Window时会构建一颗窗口层级树，层级分为 0～36 层，共 37 层，根节点为RootWindowContainer，第二层节点为DisplayContent，Activity为层级为TaskDisplayArea -> Task ->ActivityRecord -> Windowstate，其他窗口则为DisplayArea .Tokens ->WindowToken -> WindowState;
 - 当Activity进入onResume生命周期后，创建ViewRootImpl，并在其performTraversel中完成对窗口add，relayout，draw和
@@ -132,10 +129,12 @@ View.draw(RecordingCanvas)
 7. 对于Activity的相关生命周期方法，则封装成对应事务后，统一发送EXECUTE_TRANSACTION消息进行处理;	
 8. 当执行到 onResume 时，会调用WindowManager.addView方法，将 DecorView添加到 WindowManager中。触发 View 的测量、布局、绘制流程，此时 Activity 才对用户可见；
 
-## 1
+## tips
 1. createSurfaceController
 2. dump window
 3. 应用窗口如何被添加到层级树上？
+4. dump surfaceFlinger  : layer 按照层级，focused
+5. 冻屏：根据应用的包名和窗口类型禁止它添加 窗口（addWindow: 在系统层进行修改？， WindowManagerGlobal：addView 是修改）
 # SurfaceFlinger
 
 ## fence
@@ -152,6 +151,13 @@ View.draw(RecordingCanvas)
 4. 渲染线程先同步UI线程构建好的绘制命令树，然后通过dequeueBuffer申请一张处于free状态的buffer，进行GPU渲染，渲染完成后swipBuffer触发queueBuffer动作上帧；
 5. 渲染线程通过queueBuffer唤醒对端的SurfaceFlinger进程中的Binder工作线程，申请sf类型的vsync信号；
 6. sf类型的VSYNC信号到达后后，sf开始执行一帧的合成任务，之后再执行present唤醒HWC service进程执行图层合成送显；
+
+# 多任务
+1. **TouchInteractionService（TIS）的特殊性**：它通过 **InputMonitor** 监听全局触摸，属于**系统级手势监视器**，优先级高于普通应用窗口。
+2. **先收到 DOWN**（InputMonitor 优先级高）。
+3. **原窗口也会收到 DOWN**（系统先广播 DOWN 给所有监听者，再判定所有权）。
+4. 若系统手势拦截成功，**发送 CANCEL 给原窗口**，并将事件流重定向给 TIS。
+
 # 重要类
 
 ## SurfaceControl
@@ -172,3 +178,4 @@ View.draw(RecordingCanvas)
 
 1. adb shell dumpsys window windows > /Users/joee/Documents/Joeeeee/framework/window.txt
 2. adb shell dumpsys activity containers > /Users/joee/Documents/Joeeeee/frameworkcontainers.txt
+3. dump surfaceFlinger
