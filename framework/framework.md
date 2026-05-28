@@ -29,19 +29,17 @@
 ## 闪屏/winscope
 1. RelativeLayer/zorder
 # WMS/AMS
-1. adb shell dumpsys activity containers： dump 窗口层级树；
-2. adb shell dumpsys window： dump window 信息
 ## 窗口层级
 1. 窗口分为 0～36 层，共 37 层；
 2. RootWindowContainer → DisplayContent → DisplayArea → Task → ActivityRecord(WindowToken) → WindowState
-## 应用窗口的添加流程
-- WMS首次添加Window时会构建一颗窗口层级树，层级分为 0～36 层，共 37 层，根节点为RootWindowContainer，第二层节点为DisplayContent，Activity为层级为TaskDisplayArea -> Task ->ActivityRecord -> Windowstate，其他窗口则为DisplayArea .Tokens ->WindowToken -> WindowState;
-- 当Activity进入onResume生命周期后，创建ViewRootImpl，并在其performTraversel中完成对窗口add，relayout，draw和
-- `ActivityRecord` 作为 app token，早已在 `Task/TaskFragment` 层级中（例如 `TaskFragment.addChild(ActivityRecord)`）。
-- 所以最终层级是：`RootWindowContainer -> DisplayContent -> Task/TaskFragment -> ActivityRecord(WindowToken) -> WindowState`。
-- `addWindow` 完成加入后会更新焦点、输入窗口、层级分配；真正出图还要后续 `relayout`
-## 绘制
-1. mDrawState 的 5 个状态
+## 应用窗口的显示流程
+1. WMS首次添加Window时会构建一颗窗口层级树，层级分为 0～36 层，共 37 层，根节点为RootWindowContainer，第二层节点为DisplayContent对应屏幕数量，叶子节点为 WindowState，应用Activity对应的窗口路径为RootWindowContainer -> DisplayContent->TaskDisplayArea -> Task ->ActivityRecord -> WindowState;
+2. AT在执行完Activity onResume 后，创建 ViewRootImpl，同时将onCreate 中 创建的 decorView 加入到集合中，VRI 是链接 View 体系与 WMS的桥梁；
+3. VRI分别会调用add，relayout，draw方法通知 WMS，对应窗口的创建，SurfaceControl 的初始化，View 的绘制完成通知；
+	1. 窗口的创建就是新建WindowState 挂载到对应的ActivityRecord下；
+	2. SurfaceControl 的初始化：在 SurfaceFlinger 中创建对应的 Layer；
+	3. View 绘制完成：将 View 树录制为 DisplayList（RenderNode 树)；
+4. 
 ## ThreadedRenderer 绘制 View 内容的流程
 
 整个管线分为两个阶段：**录制阶段**（UI 线程）和**渲染阶段**（Render 线程）。
@@ -115,10 +113,7 @@ View.draw(RecordingCanvas)
 核心设计思想：**UI 线程只录制指令（DisplayList），不碰 GPU；Render 线程离线重放指令做真正的光栅化**。这样 UI 线程不会阻塞在 GPU 上，也能利用 Render 线程做并行渲染。
 
 `RecordingCanvas` 不会真正画像素，而是把绘制命令（drawRect, drawText, drawRenderNode 等）记录为 GPU 可重放的指令流。
-## Activity的启动流程
-1. Launcher onPause 与 realStartActivity
-2. dump activity container :层级树分析
-3. DefaultDisplay
+
 ### 面试
 1. Launcher判断是否需要处理 ActivityResult 后，获取ATMS的服务，启动Activity；
 2. ATMS解析Intent参数，进行权限校验， 通过后，创建 ActivityRecord和 Task 信息加入到根节点；
@@ -128,13 +123,12 @@ View.draw(RecordingCanvas)
 6. AMS会调用ApplicationThread的bindApplication方法，向主线程中发送bindApplication消息，启动Application；
 7. 对于Activity的相关生命周期方法，则封装成对应事务后，统一发送EXECUTE_TRANSACTION消息进行处理;	
 8. 当执行到 onResume 时，会调用WindowManager.addView方法，将 DecorView添加到 WindowManager中。触发 View 的测量、布局、绘制流程，此时 Activity 才对用户可见；
-
 ## tips
 1. createSurfaceController
 2. dump window
 3. 应用窗口如何被添加到层级树上？
 4. dump surfaceFlinger  : layer 按照层级，focused
-5. 冻屏：根据应用的包名和窗口类型禁止它添加 窗口（addWindow: 在系统层进行修改？， WindowManagerGlobal：addView 是修改）
+5. 冻屏：根据应用的包名和窗口类型禁止它添加 窗口（addWindow: 在系统层进行修改？， WindowManagerGlobal：addView 应用层修改）
 # SurfaceFlinger
 
 ## fence
