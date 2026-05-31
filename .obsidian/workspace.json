@@ -8,7 +8,7 @@
         "type": "tabs",
         "children": [
           {
-            "id": "82e2008262b5febf",
+            "id": "76a9c7904c9278f4",
             "type": "leaf",
             "state": {
               "type": "markdown",
@@ -78,7 +78,7 @@
       }
     ],
     "direction": "horizontal",
-    "width": 200
+    "width": 422.5024719238281
   },
   "right": {
     "id": "dba7657d843abeea",
@@ -176,7 +176,7 @@
             }
           }
         ],
-        "currentTab": 3
+        "currentTab": 5
       }
     ],
     "direction": "horizontal",
@@ -193,39 +193,41 @@
       "bases:新建数据库": false
     }
   },
-  "active": "82e2008262b5febf",
+  "active": "1af997c8108ee958",
   "lastOpenFiles": [
-    "2026年计划/2026-W22.md",
-    "2026-W22.md",
+    "framework/Activity启动流程 2.puml",
+    "framework/Activity启动流程 1.puml",
+    "framework/Android冷启动Activity启动流程分析.md",
+    "framework/Android图形渲染管线深度解析.md",
+    "教学文档.md",
+    "2026年计划/2026-W23.md",
+    "framework/Activity启动流程.puml",
+    "2026年计划/2026-W22：失败.md",
+    "2026年计划/2026-W21：失败.md",
+    "2026年计划/W09～W14(2.24~4.5) 42 天计划.md",
+    "fw 相关总结.md",
+    "framework/framework.md",
+    "面试/Top100.md",
+    "finishDraw.md",
     "补充.md",
+    "framework/perfetto.md",
+    "总结.md",
+    "面试/简历.md",
+    "2026-W22.md",
     "学习技巧/日、周、月、年.png",
-    "2026年计划/2026-W21.md",
     "学习技巧/费曼学习法.md",
     "学习技巧/KISS复盘法.png",
     "学习技巧/PDCA.png",
-    "2026年计划/W09～W14(2.24~4.5) 42 天计划.md",
     "学习技巧/复盘方法-2.md",
     "学习技巧/复盘.md",
     "framework/总结复盘.md",
-    "framework/framework.md",
-    "教学文档.md",
     "其他/每日口语.md",
-    "总结.md",
     "面试/复习准备.md",
     "2026年计划/W15-W29：100 天.md",
-    "面试/简历.md",
-    "未命名.md",
     "framework/Pasted image 20260428105118.png",
     "学习技巧/如何复述故事.md",
     "学习技巧/更有效的复盘.png",
     "其他/工作.md",
-    "2026年计划/2026-W07：混.md",
-    "2026年计划/2026-W02：混.md",
-    "Android/SharedFlow 的源码解读.md",
-    "Android/Compose.md",
-    "Android/Flow.md",
-    "其他/口才练习.md",
-    "2026年计划/2026-W08：过年.md",
     "framework/应用窗口显示流程.puml",
     "学习技巧/GRAI.png",
     "framework/containers.txt",
@@ -236,8 +238,6 @@
     "framework/Shell Transition 类图.puml",
     "framework",
     "framework/Pasted image 20260428143414.png",
-    "2026年计划/2.26~4.5 42 天计划",
-    "其他",
     "Android/文档图片/kmp/跨平台代码的复用.png",
     "Android/文档图片/mvc_mvp_mvvm.png",
     "Pasted image 20251228205732.png"
