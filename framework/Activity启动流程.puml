@@ -40,10 +40,14 @@ note left : 更新焦点应用
 DisPlayContent -> InputMonitor:setFocusedAppLw
 note left: 通知 SFlinger 更新焦点窗口
 ATMS -> WMS: updateFocusedWindowLocked
-note left : 更新焦点窗口，当前应用还未启动 ,焦点窗口为空
+WMS -> RootWindowContainer:updateFocusedWindowLocked
+RootWindowContainer -> DisPlayContent: updateFocusedWindowLocked
+note right : Changing focus 更新焦点窗口，当前应用还未启动 ,焦点窗口为空
 VRI ->WMS : relayoutWindow
 WMS -> WMS: updateFocusedWindowLocked
 WMS -> RootWindowContainer: updateFocusedWindowLocked
 RootWindowContainer -> DisPlayContent: updateFocusedWindowLocked
+note right : Changing focus 更新焦点窗口，窗口已准备就绪
+
 DisPlayContent -> InputMonitor: setInputFocusLw
 @enduml

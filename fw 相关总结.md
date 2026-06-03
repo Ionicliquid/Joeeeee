@@ -5,15 +5,17 @@
 2. WMShell: 运行在SystemUI进程的模块，其核心类包含
 	1. Transitions：主要负责相关过渡动画的具体播放相关逻辑
 	2. ActiveTransition：具体过渡动画的实体类
-3. 启动应用时，Launcher会构造ActivityOptions将RemoteTransition打包，RemoteTransition实现startAnimation方法接受leash用于同步播放窗口动画；
-4. ActivityStarter在启动对应Activity前，TransitionController就会创建Transition，将状态置为收集中，同时初始化SyncGroup；
-	- 对于启动动画来说，会收集4个WindowContainer，也就是应用的ActivityRecord和Task，Launcher的ActivityRecord和壁纸，同时也会将 StartingWindow 加入到 应用的ActivityRecord中，跟随 ActivityRecord 的Surface 一起动画；
+3. 启动应用时，Launcher会构造ActivityOptions将RemoteTransition打包，RemoteTransition实现startAnimation方法接收leash用于同步播放窗口动画；
+4. 进入到ATMS，ActivityStarter在启动对应Activity前，通过TransitionController创建Transition，将状态置为收集中，同时初始化SyncGroup；
+	- 启动动画来说，会收集4个WindowContainer，也就是应用的ActivityRecord和Task，Launcher的ActivityRecord和壁纸，同时也会将 StartingWindow 加入到 应用的ActivityRecord中，跟随 ActivityRecord 的Surface 一起动画，这些窗口容器都会保存在 SyncGroup中，用于检测窗口的状态；
 5. 之后通知Shell，完成ActiveTransition和TransitionHandler的初始化，同时Transition进入启动状态；
-6. 等待WMS回调BlastSyncEngine判断SyncGroup中所有窗口的Surface已经完成摆放，回调core的onTransactionReady和shell的onTransitionReady，进入播放状态；
-7. 获取ActivityOptions将RemoteTransition进行动画的播放，动画结束，回调finishCallback;
-8. 准备startTransaction 和finishTransaction 
-	1. startTransaction：过滤收集的WindowContainer，只保留Task信息，创建新的绘制树，将关联Task转移到新的根节点，统一播放；
-	2. finishTransaction ，动画结束后回调，将节点reparent到正常窗口树；
+6. 等待WMS回调BlastSyncEngine判断SyncGroup中所有窗口都绘制完成，此时回调的来源Starting Window的绘制完成，回调core的onTransactionReady和shell的onTransitionReady，进入播放状态；
+7. 获取ActivityOptions中RemoteTransition进行动画的播放，动画结束，回调finishCallback;
+	1. 动画播放时操作startTransaction 
+		1. startTransaction：过滤收集的WindowContainer，只保留Task信息和壁纸窗口，创建新的绘制树，将关联窗口转移到新的根节点，统一播放；
+	2. 动画结束操作inishTransaction
+		1. 将节点reparent到正常窗口树；
+	3. 以启动过程为例：A ->B，动画播放前A,B都会显示；动画结束B显示，A隐藏；
 ## 首帧页面的显示流程
 1. WMS首次添加Window时会构建一颗窗口层级树，层级分为 0～36 层，共 37 层，根节点为RootWindowContainer，第二层节点为DisplayContent对应屏幕数量，叶子节点为 WindowState，应用Activity对应的窗口路径为RootWindowContainer -> DisplayContent->TaskDisplayArea -> Task ->ActivityRecord -> WindowState;
 2. AT在执行完Activity onResume 后，创建 ViewRootImpl，同时将onCreate 中 创建的 decorView 加入到集合中统一管理，VRI 是链接 View 体系与 WMS的桥梁；
@@ -28,16 +30,15 @@
 	- BufferQueue 中有可用的 buffer
     - SurfaceControl 的状态（由 WMS 的 Transaction 配置）已生效
 ## Activity 的启动流程
-1. Launcher 获取 ATMS 服务，发起 Binder 请求对应Home Activity;
-2. ATMS解析Intent参数，进行权限校验，并计算 Task 标记,Launcher启动应用都会携带 new_task 标记，新建Task加入到DisplayArea 中（多个 Task 挂在同一个 DisplayArea 下?）；
+1. Launcher发起启动请求，Instrumentation 判断是否需要返回值，获取 ATMS 服务，发起 Binder 请求对应HOME Activity;
+2. ATMS解析Intent参数，进行权限校验，并计算 Task 标记，Launcher启动应用都会携带 new_task 标记，新建Task加入到DisplayArea 中；
 3. 创建 Pause事务暂停 Launcher，同时通过socket请求zygote创建应用进程；
 4. zygote fork出子进程后，通过反射创建ActivityThread对象，同时执行其入口main方法；
 5. 在main方法中，启动应用的Binder服务ApplicationThread ，并返回给AMS，同时启动主线程Looper，开始消息循环；形成AMS -> ApplicationThread ->Handler通信链；
 6. AMS会调用ApplicationThread的bindApplication方法，向主线程中发送bindApplication消息，启动Application；
-7. Launcher pause完成同时进程启动完成，才开始真正启动 Activity；
-8. 对于Activity的相关生命周期方法，则封装成对应事务后，统一发送EXECUTE_TRANSACTION消息进行处理;	
-9. 当执行到 resume 时，新建 ViewRootImpl，将 View与 Window 绑定。申请 V-sync 信号，触发 View 的测量、布局、绘制流程，此时 Activity 才对用户可见；
-10. 看下 9pro 上的调用栈？
+7. 当Launcher pause完成同时Application启动完成，AMS才开始真正启动 Activity；
+8. 将启动事务和Resume事务打包后，调用ApplicationThread，发送EXECUTE_TRANSACTION消息进行处理;	
+9. 当执行到 resume 时，新建 ViewRootImpl，将 View与 Window 绑定，申请 V-sync 信号，触发 View 的测量、布局、绘制流程，之后 Activity 才真正对用户可见；
 
 ## 一帧数据的绘制流程
 1. 应用的`View.invalidate()`、动画、数据变化或输入事件触发会调用到ViewRootImpl.scheduleTraversals，
@@ -54,9 +55,11 @@
 	2. 从日志中过滤 Changing Focus，从桌面启动应用，focus 变化从 Launcher 到 null 再到对应的 App;
 		1. 当 Launcher pause 成功，同时应用进程创建完成并开始绑定Application 时，将调用ActivityRecord 的setVisibility方法，将 Launcher 的焦点置为 false，应用的焦点置为 true；
 		2. 当relayout 时， 将 null 设置为对应应用窗口；
-		3. 
 4. 对于 SurfaceFlinger
 	1. 焦点信息作为 Transaction 的一部分，与窗口属性一起**原子性地**提交给 SurfaceFlinger，由 SF 统一转发给 InputFlinger，用来保证了渲染与输入的同步一致；
-	2. 
-5. event 日志中的 `input_focus` tag
-	1. Focus leaving /Focus Request /Focus entering
+5. InputDispatcher 结合event 日志中的 `input_focus` tag
+	1. Requesting ：Launcher pause执行完，请求将focus置空；
+	2. Focus leaving ：焦点离开Launcher
+	3. Focus Request ： 应用resume完成，窗口relayout完成，请求焦点；
+	4. Focus entering： InputDispatcher完成焦点的更新；
+6. 
