@@ -11,9 +11,9 @@
 5. 之后通知Shell，完成ActiveTransition和TransitionHandler的初始化，同时Transition进入启动状态；
 6. 等待WMS回调BlastSyncEngine判断SyncGroup中所有窗口都绘制完成，此时回调的来源Starting Window的绘制完成，回调core的onTransactionReady和shell的onTransitionReady，进入播放状态；
 7. 获取ActivityOptions中RemoteTransition进行动画的播放，动画结束，回调finishCallback;
-	1. 动画播放时操作startTransaction 
+	1. 动画播放时操作启动事务
 		1. startTransaction：过滤收集的WindowContainer，只保留Task信息和壁纸窗口，创建新的绘制树，将关联窗口转移到新的根节点，统一播放；
-	2. 动画结束操作inishTransaction
+	2. 动画结束操作结束事务
 		1. 将节点reparent到正常窗口树；
 	3. 以启动过程为例：A ->B，动画播放前A,B都会显示；动画结束B显示，A隐藏；
 ## 首帧页面的显示流程
@@ -62,4 +62,6 @@
 	2. Focus leaving ：焦点离开Launcher
 	3. Focus Request ： 应用resume完成，窗口relayout完成，请求焦点；
 	4. Focus entering： InputDispatcher完成焦点的更新；
-6. 
+## 闪屏问题
+1. main -> DialogActivity1 -> DialogActivity2 : D2 退出
+2. Winscope: indowManager 和录屏没有对应，抓 SurfaceFlinger 即可，去掉输入法

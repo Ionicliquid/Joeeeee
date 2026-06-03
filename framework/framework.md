@@ -7,7 +7,11 @@
 ![[Pasted image 20260428143414.png]]
 
 ## 闪屏/winscope
-1. RelativeLayer/zorder
+1. 挂载在Task下的DimLayer，一个 Task 对应一个 Dim ，会关联到Task 下不同的 Activity
+2. 闪白的情况就是 Dim Layer更新不及时；
+3. RelativeLayer:Dim  Layer 关联到父图层，也就是对应Activity 图层，会跟随父图层的显示状态
+4. zorder : 相对 z 轴，正数，显示在上方，负数显示在下方
+5. A2 Window 图层已经隐藏（由父容器空气），但是它的状态没有隐藏
 # WMS/AMS
 ## 窗口层级
 1. 窗口分为 0～36 层，共 37 层；
