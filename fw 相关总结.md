@@ -59,7 +59,7 @@
 		4. 当A2应用进程创建成功并完成Application创建与绑定后，将焦点应用设置为A2，执行真正的启动Activity方法，执行完resume方法，通过VRI，完成窗口的创建和relayout后 将焦点设置为应用窗口；
 		5. 真正表示应用窗口可见的visible属性，
 			1. 对于A2来说，需要等到startingWindow绘制完成，在启动的Transition动画开始前，设置为true;
-			2. 对于A1来说，需要Transition动画就结束后，通过Transition动画结束后，finishTransition回调来提交隐藏；
+			2. 对于A1来说，通过Transition动画结束后的finishTransition回调来提交隐藏；
 4. 对于 SurfaceFlinger
 	1. 焦点信息作为 Transaction 的一部分，与窗口属性一起**原子性地**提交给 SurfaceFlinger，由 SF 统一转发给 InputFlinger，用来保证了渲染与输入的同步一致；
 5. InputDispatcher 结合event 日志中的 `input_focus` tag
