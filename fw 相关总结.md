@@ -53,8 +53,13 @@
 3. 对于 WMS ：
 	1. 通过 dump windows信息，获取每个窗口的绘制状态和焦点窗口信息和焦点应用信息，对于普通应用来说，焦点窗口通常就是焦点应用。（例外：下拉通知栏）；
 	2. 从日志中过滤 Changing Focus，从桌面启动应用，focus 变化从 Launcher 到 null 再到对应的 App;
-		1. 当 Launcher pause 成功，同时应用进程创建完成并开始绑定Application 时，将调用ActivityRecord 的setVisibility方法，将 Launcher 的焦点置为 false，应用的焦点置为 true；
-		2. 当relayout 时， 将 null 设置为对应应用窗口；
+		1. Activity的可见性通过2个字段描述mVisibleRequested 和visible
+		2. A1启动A2，A1的pause成功回调，调用A1和A2对应ActivityRecord 的setVisibility方法，将mVisibleRequested分别置为false和true;
+		3. A2的startingWindow 添加成功，由于startingWindow 不处理事件，将当前的焦点窗口置为空；
+		4. 当A2应用进程创建成功并完成Application创建与绑定后，将焦点应用设置为A2，执行真正的启动Activity方法，执行完resume方法，通过VRI，完成窗口的创建和relayout后 将焦点设置为应用窗口；
+		5. 真正表示应用窗口可见的visible属性，
+			1. 对于A2来说，需要等到startingWindow绘制完成，在启动的Transition动画开始前，设置为true;
+			2. 对于A1来说，需要Transition动画就结束后，通过Transition动画结束后，finishTransition回调来提交隐藏；
 4. 对于 SurfaceFlinger
 	1. 焦点信息作为 Transaction 的一部分，与窗口属性一起**原子性地**提交给 SurfaceFlinger，由 SF 统一转发给 InputFlinger，用来保证了渲染与输入的同步一致；
 5. InputDispatcher 结合event 日志中的 `input_focus` tag

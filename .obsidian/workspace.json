@@ -4,21 +4,21 @@
     "type": "split",
     "children": [
       {
-        "id": "baf5c4bb4d6e735a",
+        "id": "e594e4da7d1573bb",
         "type": "tabs",
         "children": [
           {
-            "id": "76a9c7904c9278f4",
+            "id": "b489c6158adf695f",
             "type": "leaf",
             "state": {
               "type": "markdown",
               "state": {
-                "file": "framework/framework.md",
+                "file": "fw 相关总结.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "framework"
+              "title": "fw 相关总结"
             }
           }
         ]
@@ -78,7 +78,7 @@
       }
     ],
     "direction": "horizontal",
-    "width": 422.5024719238281
+    "width": 200
   },
   "right": {
     "id": "dba7657d843abeea",
@@ -142,13 +142,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "framework/framework.md",
+                "file": "fw 相关总结.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "framework 的大纲"
+              "title": "fw 相关总结 的大纲"
             }
           },
           {
@@ -164,19 +164,9 @@
               "icon": "lucide-file",
               "title": "口语 9000 句"
             }
-          },
-          {
-            "id": "459e9b368d478087",
-            "type": "leaf",
-            "state": {
-              "type": "calendar",
-              "state": {},
-              "icon": "calendar-with-checkmark",
-              "title": "Calendar"
-            }
           }
         ],
-        "currentTab": 5
+        "currentTab": 3
       }
     ],
     "direction": "horizontal",
@@ -193,91 +183,53 @@
       "bases:新建数据库": false
     }
   },
-  "floating": {
-    "id": "137ae1e487b284d4",
-    "type": "floating",
-    "children": [
-      {
-        "id": "f077b39a68874871",
-        "type": "window",
-        "children": [
-          {
-            "id": "2550fc69ad6dc7cb",
-            "type": "tabs",
-            "children": [
-              {
-                "id": "aa7aae615810b3a0",
-                "type": "leaf",
-                "state": {
-                  "type": "markdown",
-                  "state": {
-                    "file": "面试/Top100.md",
-                    "mode": "source",
-                    "source": false
-                  },
-                  "icon": "lucide-file",
-                  "title": "Top100"
-                }
-              }
-            ]
-          }
-        ],
-        "direction": "vertical",
-        "x": -1024,
-        "y": 166,
-        "width": 1024,
-        "height": 800,
-        "maximize": false,
-        "zoom": -0.5
-      }
-    ]
-  },
-  "active": "1af997c8108ee958",
+  "active": "b489c6158adf695f",
   "lastOpenFiles": [
-    "fw 相关总结.md",
-    "finishDraw.md",
-    "教学文档.md",
-    "framework/framework.md",
-    "面试/简历.md",
-    "2026年计划/2026-W23.md",
-    "面试/Top100.md",
-    "framework/Activity启动流程 2.puml",
-    "framework/Activity启动流程 1.puml",
     "framework/Android冷启动Activity启动流程分析.md",
     "framework/Android图形渲染管线深度解析.md",
+    "fw 相关总结.md",
+    "finishDraw.md",
+    "面试/简历.md",
+    "简历.md",
+    "未命名.md",
+    "framework/framework.md",
+    "图片/552.jpg",
     "framework/Activity启动流程.puml",
+    "2026年计划/2026-W23.md",
     "2026年计划/2026-W22：失败.md",
     "2026年计划/2026-W21：失败.md",
-    "2026年计划/W09～W14(2.24~4.5) 42 天计划.md",
-    "补充.md",
-    "framework/perfetto.md",
-    "总结.md",
-    "2026-W22.md",
+    "framework/总结.md",
+    "学习技巧/更有效的复盘.png",
     "学习技巧/日、周、月、年.png",
-    "学习技巧/费曼学习法.md",
-    "学习技巧/KISS复盘法.png",
-    "学习技巧/PDCA.png",
+    "学习技巧/如何复述故事.md",
     "学习技巧/复盘方法-2.md",
     "学习技巧/复盘.md",
-    "framework/总结复盘.md",
-    "其他/每日口语.md",
-    "面试/复习准备.md",
-    "2026年计划/W15-W29：100 天.md",
-    "framework/Pasted image 20260428105118.png",
-    "学习技巧/如何复述故事.md",
-    "学习技巧/更有效的复盘.png",
-    "其他/工作.md",
-    "framework/应用窗口显示流程.puml",
+    "学习技巧/PDCA.png",
+    "学习技巧/KISS复盘法.png",
     "学习技巧/GRAI.png",
-    "framework/containers.txt",
+    "其他/每日口语.md",
+    "其他/如何记录自己.md",
+    "其他/口才练习.md",
+    "framework/总结复盘.md",
+    "framework/应用窗口显示流程.puml",
+    "2026年计划/2026-W21.md",
+    "2026-W22.md",
+    "面试/复习准备.md",
+    "补充.md",
+    "教学文档.md",
     "framework/window.txt",
+    "framework/containers.txt",
+    "其他/工作.md",
+    "其他/随笔.md",
     "framework/桌面拖拽.puml",
     "framework/拖拽流程图.puml",
     "framework/Shell Transition流程图.puml",
     "framework/Shell Transition 类图.puml",
+    "framework",
     "framework/Pasted image 20260428143414.png",
+    "framework/Pasted image 20260428105118.png",
+    "2026年计划/2.26~4.5 42 天计划",
     "Android/文档图片/kmp/跨平台代码的复用.png",
-    "Android/文档图片/mvc_mvp_mvvm.png",
-    "Pasted image 20251228205732.png"
+    "Android/文档图片/mvc_mvp_mvvm.png"
   ]
 }
