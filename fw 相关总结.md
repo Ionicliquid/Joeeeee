@@ -58,8 +58,8 @@
 		3. A2的startingWindow 添加成功，由于startingWindow 不处理事件，将当前的焦点窗口置为空；
 		4. 当A2应用进程创建成功并完成Application创建与绑定后，将焦点应用设置为A2，执行真正的启动Activity方法，执行完resume方法，通过VRI，完成窗口的创建和relayout后 将焦点设置为应用窗口；
 		5. 真正表示应用窗口可见的visible属性，
-			1. 对于A2来说，需要等到startingWindow绘制完成，在启动的Transition动画开始前，设置为true;
-			2. 对于A1来说，通过Transition动画结束后的finishTransition回调来提交隐藏；
+			1. 对于A2来说，需要等到startingWindow绘制完成，在Transition动画开始前，设置为true;
+			2. 对于A1来说，需要Transition动画就结束后，通过finishTransition回调来提交隐藏；
 4. 对于 SurfaceFlinger
 	1. 焦点信息作为 Transaction 的一部分，与窗口属性一起**原子性地**提交给 SurfaceFlinger，由 SF 统一转发给 InputFlinger，用来保证了渲染与输入的同步一致；
 5. InputDispatcher 结合event 日志中的 `input_focus` tag
@@ -68,5 +68,11 @@
 	3. Focus Request ： 应用resume完成，窗口relayout完成，请求焦点；
 	4. Focus entering： InputDispatcher完成焦点的更新；
 ## 闪屏问题
-1. main -> DialogActivity1 -> DialogActivity2 : D2 退出
-2. Winscope: indowManager 和录屏没有对应，抓 SurfaceFlinger 即可，去掉输入法
+### 根因
+1. main -> DialogActivity1 -> DialogActivity2 : A2 退出，出现闪屏
+	1. 跟踪Winscope，发现是DimLayer的消失时机不对
+	2. DimLayer是挂载在Task下的图层，通过RelativeLayer关联到父图层，也就是关联对应ActivityRecord，设置zorder为-1显示在下方同时会跟随父图层的显示状态；
+	3. 闪白的情况就是 Dim Layer更新不及时；
+2. 在退出Activity时，SHELL侧在Transition动画结束后，就apply了FinishTransaction，像SurfaceFlinger提交了隐藏图层的请求；
+3. 而ActivityRecord的visible属性需要等待shell通知Core Transition动画结束才进行设置；
+4. Winscope: indowManager 和录屏没有对应，抓 SurfaceFlinger 即可，去掉输入法
