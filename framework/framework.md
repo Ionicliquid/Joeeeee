@@ -17,7 +17,8 @@
 1. 窗口分为 0～36 层，共 37 层；
 2. RootWindowContainer → DisplayContent → DisplayArea → Task → ActivityRecord(WindowToken) → WindowState
 
-
+## winScope
+1. winScope: windowManager 和录屏没有对应，抓 SurfaceFlinger 即可，去掉输入法
 ## focusedWindows
 1. mCurrentFocus：当前有焦点的窗口
 2. mFocusedApp ：当前焦点的 Activity
@@ -44,12 +45,13 @@
 		1. mGraphicBuffer
 		2. mBufferState
 	2. mQueue：`list<BufferItem>`
-# 多任务
+# PIP
+## 多任务
 1. **TouchInteractionService（TIS）的特殊性**：它通过 **InputMonitor** 监听全局触摸，属于**系统级手势监视器**，优先级高于普通应用窗口。
 2. **先收到 DOWN**（InputMonitor 优先级高）。
 3. **原窗口也会收到 DOWN**（系统先广播 DOWN 给所有监听者，再判定所有权）。
 4. 若系统手势拦截成功，**发送 CANCEL 给原窗口**，并将事件流重定向给 TIS。
-
+# Input
 # 重要类
 
 ## SurfaceControl
@@ -73,3 +75,7 @@
 3. dump surfaceFlinger
 4. adb shell dumpsys window > /Users/joee/Android/window1.txt
 5. adb shell dumpsys window lastanr
+6. Proto 日志
+	1. WM_SHOW_TRANSACTIONS
+	2. WM_DEBUG_FOCUS_LIGHT : "Changing Focus"
+	3. WM_DEBUG_FOCUS: "Looking Focus"

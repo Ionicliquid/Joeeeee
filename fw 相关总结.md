@@ -18,15 +18,16 @@
 	3. 以启动过程为例：A ->B，动画播放前A,B都会显示；动画结束B显示，A隐藏；
 ## 首帧页面的显示流程
 1. WMS首次添加Window时会构建一颗窗口层级树，层级分为 0～36 层，共 37 层，根节点为RootWindowContainer，第二层节点为DisplayContent对应屏幕数量，叶子节点为 WindowState，应用Activity对应的窗口路径为RootWindowContainer -> DisplayContent->TaskDisplayArea -> Task ->ActivityRecord -> WindowState;
-2. AT在执行完Activity onResume 后，创建 ViewRootImpl，同时将onCreate 中 创建的 decorView 加入到集合中统一管理，VRI 是链接 View 体系与 WMS的桥梁；
-3. VRI分别会调用addWindow，relayout，drawFinish方法通知 WMS；
-4. addWindow 对应了窗口的创建，会新建WindowState 挂载到对应的ActivityRecord下；
-5. SurfaceControl 的初始化：在 SurfaceFlinger 中创建对应的 Layer；
-6. View 绘制完成：
+2. AT在执行完Activity onResume 后，创建 VRI，同时将onCreate 中 创建的 decorView 加入到集合中统一管理，VRI 是链接 View 体系与 WMS的桥梁；
+3. VRI调用addWindow，relayout，drawFinish方法通知 WMS；
+	1. addWindow 对应了窗口的创建，会新建WindowState 挂载到对应的ActivityRecord下，完成后 调用 requestLayout 申请 v-sync 信号；
+	2. relayout 对应了 SurfaceControl 的初始化：在 SurfaceFlinger 中创建对应的 Layer，并将其返回给英语段；
+	3. drawFinish 在 View 绘制完成之后，将合并了窗口几何状态（位置、裁剪、变换等）的 Transaction 发给 WMS
+4. View 绘制完成：
 	1. UI线程将 View 树录制为 DisplayList（RenderNode 树)，并通过将syncAndDrawFrame将 RenderNode 树从 UI 线程交给 渲染线程，
 	2. 渲染线程申请 Buffer（dequeueBuffer/requestBuffer）完成 GPU渲染后， 再将Buffer传递（queueBuffer）给 SurfaceFlinger;
 	3. 同时通过把合并了窗口几何状态（位置、裁剪、变换等）的 Transaction 发给 WMS；
-7. SurfaceFlinger 等待两者就绪：
+5. SurfaceFlinger 等待两者就绪：
 	- BufferQueue 中有可用的 buffer
     - SurfaceControl 的状态（由 WMS 的 Transaction 配置）已生效
 ## Activity 的启动流程
@@ -52,27 +53,43 @@
 2. 焦点的流转涉及 WMS -> SurfaceFlinger  -> InputDispatcher
 3. 对于 WMS ：
 	1. 通过 dump windows信息，获取每个窗口的绘制状态和焦点窗口信息和焦点应用信息，对于普通应用来说，焦点窗口通常就是焦点应用。（例外：下拉通知栏）；
-	2. 从日志中过滤 Changing Focus，从桌面启动应用，focus 变化从 Launcher 到 null 再到对应的 App;
-		1. Activity的可见性通过2个字段描述mVisibleRequested 和visible
-		2. A1启动A2，A1的pause成功回调，调用A1和A2对应ActivityRecord 的setVisibility方法，将mVisibleRequested分别置为false和true;
-		3. A2的startingWindow 添加成功，由于startingWindow 不处理事件，将当前的焦点窗口置为空；
+	2. 从日志中过滤 Changing Focus，Changing Focus调用最常见的来源就是 relayoutWindow，也就是窗口添加成功之后，WMS 重新为窗口添加布局参数；
+	3. 从 Activity 1  启动 Activity 2，focus 变化从A1 到 null 再到对应的 A1; 
+		1. ActivityRecord 的可见性通过2个字段描述mVisibleRequested 和visible
+		2. 当A1的pause成功回调，调用A1和A2对应ActivityRecord 的setVisibility方法，将mVisibleRequested分别置为false和true;
+		3. A2的startingWindow 添加成功，由于startingWindow 不处理事件，Changing Focus 将当前的焦点窗口置为空；
 		4. 当A2应用进程创建成功并完成Application创建与绑定后，将焦点应用设置为A2，执行真正的启动Activity方法，执行完resume方法，通过VRI，完成窗口的创建和relayout后 将焦点设置为应用窗口；
 		5. 真正表示应用窗口可见的visible属性，
 			1. 对于A2来说，需要等到startingWindow绘制完成，在Transition动画开始前，设置为true;
 			2. 对于A1来说，需要Transition动画就结束后，通过finishTransition回调来提交隐藏；
 4. 对于 SurfaceFlinger
-	1. 焦点信息作为 Transaction 的一部分，与窗口属性一起**原子性地**提交给 SurfaceFlinger，由 SF 统一转发给 InputFlinger，用来保证了渲染与输入的同步一致；
+	1. 当 Changing Focus 发生变化，焦点窗口作为 Transaction 的一部分，与窗口属性一起**原子性地**提交给 SurfaceFlinger，由 SF 统一转发给 InputFlinger，用来保证了渲染与输入的同步一致；
 5. InputDispatcher 结合event 日志中的 `input_focus` tag
-	1. Requesting ：Launcher pause执行完，请求将focus置空；
-	2. Focus leaving ：焦点离开Launcher
+	1. Requesting ：A1 pause执行完,失去焦点，A2 Starting Window 添加成功，请求将focus置空；
+	2. Focus leaving ：焦点离开A1，InputDispatcher 输出
 	3. Focus Request ： 应用resume完成，窗口relayout完成，请求焦点；
 	4. Focus entering： InputDispatcher完成焦点的更新；
-## 闪屏问题
-### 根因
+## 闪屏 黑屏 定屏 问题
+### 必现闪屏
 1. main -> DialogActivity1 -> DialogActivity2 : A2 退出，出现闪屏
-	1. 跟踪Winscope，发现是DimLayer的消失时机不对
-	2. DimLayer是挂载在Task下的图层，通过RelativeLayer关联到父图层，也就是关联对应ActivityRecord，设置zorder为-1显示在下方同时会跟随父图层的显示状态；
-	3. 闪白的情况就是 Dim Layer更新不及时；
-2. 在退出Activity时，SHELL侧在Transition动画结束后，就apply了FinishTransaction，像SurfaceFlinger提交了隐藏图层的请求；
-3. 而ActivityRecord的visible属性需要等待shell通知Core Transition动画结束才进行设置；
-4. Winscope: indowManager 和录屏没有对应，抓 SurfaceFlinger 即可，去掉输入法
+	1. 跟踪Winscope，发现是Dim图层显示异常；
+	2. Dim图层是挂载在Task下的图层，通过RelativeLayer关联到父容器，也就是关联对应ActivityRecord，设置z-order为-1显示在下方，同时会跟随ActivityRecord的显示状态；
+	3. 问题的根因就是当A2隐藏后，Dim 没有及时更新它的父容器并提交显示；
+	4. Activity的可见性通过2个字段描述mVisibleRequested 和visible
+		2. A1启动A2，A1的pause成功回调，调用A1和A2对应ActivityRecord 的setVisibility方法，将mVisibleRequested分别置为false和true;
+2. 在退出Activity时，Shell侧在transition动画结束时 apply finishTransaction，向SurfaceFlinger提交了隐藏Activity图层的请求；
+3. 而ActivityRecord的visible属性的更新则需要等待shell通知core ，回调 finishTransition才进行设置；
+4. 修改思路：就是及时更新父容器，并同步提交显示
+5. 修改方式：
+	1. 在 A2 对应 ActivityRecord的pause完成，A2 结束 resume 之后，调用它的 prepareSurface 方法更新Dim的parent属性，；
+	2. 在 core 构造finishTransaction时，在事务中增加 Dim图层的 reparent 操作，保证 A2隐藏同时Dim 图层能切换到新的parent;
+	
+### 偶现闪屏
+
+1. A2 事务 在窗口绘制完成之后 在 core 和 shell 中都会调用 show，这次 show 的 apply 在 Shell 中动画开始开始播放前 apply;
+2. 但是在这中间 WindowAnimator -animate-prepareSurfaces 产生的 对 dim relativeTo 的事务，很快就被 apply 了；
+### 定屏
+1. dump window / dump Surface Flinger   透明的 window 覆盖在桌面上。
+2. dump input 
+	1. key 事件派发是需要焦点窗口，触摸事件不需要？为什么？
+	2. 事件被派发到了“recents_animation_input_consumer”
