@@ -53,8 +53,8 @@
 2. 焦点的流转涉及 WMS -> SurfaceFlinger  -> InputDispatcher
 3. 对于 WMS ：
 	1. 通过 dump windows信息，获取每个窗口的绘制状态和焦点窗口信息和焦点应用信息，对于普通应用来说，焦点窗口通常就是焦点应用。（例外：下拉通知栏）；
-	2. 从日志中过滤 Changing Focus，Changing Focus调用最常见的来源就是 relayoutWindow，也就是窗口添加成功之后，WMS 重新为窗口添加布局参数；
-	3. 从 Activity 1  启动 Activity 2，focus 变化从A1 到 null 再到对应的 A1; 
+	2. 从日志中过滤 Changing Focus，Changing Focus调用最常见的来源就是 relayoutWindow，也就是窗口添加成功之后，WMS 处理窗口属性和 创建 SurfaceControl；
+	3. 从 Activity 1  启动 Activity 2，focus 变化从A1 到 null 再到 A2; 
 		1. ActivityRecord 的可见性通过2个字段描述mVisibleRequested 和visible
 		2. 当A1的pause成功回调，调用A1和A2对应ActivityRecord 的setVisibility方法，将mVisibleRequested分别置为false和true;
 		3. A2的startingWindow 添加成功，由于startingWindow 不处理事件，Changing Focus 将当前的焦点窗口置为空；
@@ -63,31 +63,35 @@
 			1. 对于A2来说，需要等到startingWindow绘制完成，在Transition动画开始前，设置为true;
 			2. 对于A1来说，需要Transition动画就结束后，通过finishTransition回调来提交隐藏；
 4. 对于 SurfaceFlinger
-	1. 当 Changing Focus 发生变化，焦点窗口作为 Transaction 的一部分，与窗口属性一起**原子性地**提交给 SurfaceFlinger，由 SF 统一转发给 InputFlinger，用来保证了渲染与输入的同步一致；
+	1. 当 Changing Focus 发生变化，焦点窗口作为 Transaction 的一部分，与窗口属性一起**原子性地**提交给 SurfaceFlinger，焦点要更新成功，需要首帧绘制完成之后，由 SF 统一转发给 InputFlinger，用来保证了渲染与输入的同步一致；
 5. InputDispatcher 结合event 日志中的 `input_focus` tag
-	1. Requesting ：A1 pause执行完,失去焦点，A2 Starting Window 添加成功，请求将focus置空；
-	2. Focus leaving ：焦点离开A1，InputDispatcher 输出
-	3. Focus Request ： 应用resume完成，窗口relayout完成，请求焦点；
+	1. Requesting ：由WMS输出，A1 pause执行完,失去焦点，A2 Starting Window 添加成功，请求将focus置空；
+	2. Focus leaving ：焦点离开A1，由InputDispatcher 输出
+	3. Focus Request ：由WMS输出，窗口relayout完成，请求焦点；
 	4. Focus entering： InputDispatcher完成焦点的更新；
 ## 闪屏 黑屏 定屏 问题
 ### 必现闪屏
-1. main -> DialogActivity1 -> DialogActivity2 : A2 退出，出现闪屏
-	1. 跟踪Winscope，发现是Dim图层显示异常；
-	2. Dim图层是挂载在Task下的图层，通过RelativeLayer关联到父容器，也就是关联对应ActivityRecord，设置z-order为-1显示在下方，同时会跟随ActivityRecord的显示状态；
-	3. 问题的根因就是当A2隐藏后，Dim 没有及时更新它的父容器并提交显示；
-	4. Activity的可见性通过2个字段描述mVisibleRequested 和visible
-		2. A1启动A2，A1的pause成功回调，调用A1和A2对应ActivityRecord 的setVisibility方法，将mVisibleRequested分别置为false和true;
-2. 在退出Activity时，Shell侧在transition动画结束时 apply finishTransaction，向SurfaceFlinger提交了隐藏Activity图层的请求；
-3. 而ActivityRecord的visible属性的更新则需要等待shell通知core ，回调 finishTransition才进行设置；
-4. 修改思路：就是及时更新父容器，并同步提交显示
-5. 修改方式：
-	1. 在 A2 对应 ActivityRecord的pause完成，A2 结束 resume 之后，调用它的 prepareSurface 方法更新Dim的parent属性，；
-	2. 在 core 构造finishTransaction时，在事务中增加 Dim图层的 reparent 操作，保证 A2隐藏同时Dim 图层能切换到新的parent;
+1. 在mainActivity中 启动半屏的 DialogActivity1 ，在Activity1中，在启动另外一个 DialogActivity2 
+	1. 偶现闪白屏，退出Activity2，必现闪白屏，跟踪Winscope，发现是Dim图层显示异常；
+	2. Dim图层是挂载在Task下的图层，通过RelativeLayer关联到父容器，也就是关联对应Activity图层，会跟随Activty的显示状态，并设置z-order为-1显示在下方；
+	3. 问题的根因就是启动和退出过程中，Dim 没有及时更新它的父容器并提交显示；
+2. 启动时，A2的窗口绘制完成之后，开始Transition动画，A2窗口显示的startTransaction事务的提交在Shell中动画开始播放时；
+3. 在退出A2时，A2窗口隐藏事务finishTransaction ,在Transition动画结束时由Shell 提交；
+4. Dim 图层的父容器更新来自WindowAnimator.prepareSurfaces它由Choreographer.FrameCallback触发，每一帧都会回调，更新到栈顶的Activity，只检查ActivityRecord的visible属性；
+5. 启动A2时，ActivityRecord的visible在core侧就完成了更新；
+6. 退出A2时，visible属性的更新则需要等待shell通知core ，回调 finishTransition才进行设置；
+7. 启动闪屏来自，Shell侧没有提交完成，但是prepareSurfaces将Dim的父容器更新到了A2;
+8. 退出的闪屏来自，Shell 侧已经提交完成，但是prepareSurfaces依然将Dim 父容器更新为A2;
+9. 修改思路：就是将Dim的更新事务与Transition动画的开始事务和结束事务合并，做到同步更新，同时切断其他事务更新Dim的路径；
+10. 修改方式：
+	1. 启动闪屏：
+		1. Transition动画启动前，也就是A2窗口绘制完成之后，在启动事务中增加 Dim图层的 reparent 操作；
+		2. 这次reparent操作是A2首次被设置为visible，后续我们增加判断如果设置的窗口与此次一次则返回，防止prepareSurfaces中其他事务将Dim加入到A2中；
+	2. 退出闪屏：
+		1. 在更新Dim的parent方法中，检查对应Activity的可见性；
+		2. 在 A2 pause完成时，A1 开始resume 之后，就将Dim的parent指向A1，后续Dim的parent不会再更新回A2。
+		3. 在 core 构造finishTransaction方法中，在事务中增加 Dim图层的 reparent 操作；
 	
-### 偶现闪屏
-
-1. A2 事务 在窗口绘制完成之后 在 core 和 shell 中都会调用 show，这次 show 的 apply 在 Shell 中动画开始开始播放前 apply;
-2. 但是在这中间 WindowAnimator -animate-prepareSurfaces 产生的 对 dim relativeTo 的事务，很快就被 apply 了；
 ### 定屏
 1. dump window / dump Surface Flinger   透明的 window 覆盖在桌面上。
 2. dump input 
