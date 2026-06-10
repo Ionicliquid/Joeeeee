@@ -234,9 +234,10 @@
   },
   "active": "76a9c7904c9278f4",
   "lastOpenFiles": [
+    "面试/Top100.md",
+    "ANR.md",
     "Pasted image 20260610172057.png",
     "fw 相关总结.md",
-    "面试/Top100.md",
     "finishDraw.md",
     "补充.md",
     "简历.md",
@@ -278,7 +279,6 @@
     "framework/Shell Transition 类图.puml",
     "framework/Pasted image 20260428143414.png",
     "Android/文档图片/kmp/跨平台代码的复用.png",
-    "Android/文档图片/mvc_mvp_mvvm.png",
-    "Pasted image 20251228205732.png"
+    "Android/文档图片/mvc_mvp_mvvm.png"
   ]
 }
