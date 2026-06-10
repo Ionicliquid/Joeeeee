@@ -8,4 +8,4 @@
 # todo 
 1.  dump 下 recent task下的task的显示？
 2.  切换焦点时 顶部的 Task 为什么是桌面？
-3. 
+3. finish 时 visible 怎么变化的？

@@ -13,15 +13,30 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "ANR.md",
+                "file": "2026年计划/2026-W24.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "ANR"
+              "title": "2026-W24"
+            }
+          },
+          {
+            "id": "3ca0f4845ac9304e",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "面试/Top100.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "Top100"
             }
           }
-        ]
+        ],
+        "currentTab": 1
       }
     ],
     "direction": "vertical"
@@ -142,13 +157,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "ANR.md",
+                "file": "面试/Top100.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "ANR 的大纲"
+              "title": "Top100 的大纲"
             }
           },
           {
@@ -171,12 +186,12 @@
             "state": {
               "type": "calendar",
               "state": {},
-              "icon": "lucide-ghost",
-              "title": "calendar"
+              "icon": "calendar-with-checkmark",
+              "title": "Calendar"
             }
           }
         ],
-        "currentTab": 3
+        "currentTab": 5
       }
     ],
     "direction": "horizontal",
@@ -232,24 +247,23 @@
       }
     ]
   },
-  "active": "76a9c7904c9278f4",
+  "active": "3ca0f4845ac9304e",
   "lastOpenFiles": [
-    "面试/Top100.md",
+    "2026年计划/2026-W23：失败.md",
+    "2026年计划/W15-W29：100 天.md",
     "ANR.md",
     "Pasted image 20260610172057.png",
-    "fw 相关总结.md",
-    "finishDraw.md",
-    "补充.md",
-    "简历.md",
-    "framework/framework.md",
     "2026年计划/2026-W24.md",
-    "2026年计划/2026-W23.md",
     "面试/复习准备.md",
+    "framework/framework.md",
     "教学文档.md",
+    "fw 相关总结.md",
+    "面试/Top100.md",
     "framework/总结复盘.md",
     "面试/简历.md",
     "framework/perfetto.md",
-    "未命名.md",
+    "finishDraw.md",
+    "简历.md",
     "framework/Activity启动流程 2.puml",
     "framework/Activity启动流程 1.puml",
     "framework/Android冷启动Activity启动流程分析.md",
@@ -258,6 +272,7 @@
     "2026年计划/2026-W22：失败.md",
     "2026年计划/2026-W21：失败.md",
     "2026年计划/W09～W14(2.24~4.5) 42 天计划.md",
+    "补充.md",
     "总结.md",
     "2026-W22.md",
     "学习技巧/日、周、月、年.png",
