@@ -6,6 +6,8 @@
 2. Transition#mTargets
 ![[Pasted image 20260428143414.png]]
 
+## merge 
+1. 同一 Track 内的 Transition 本来就是允许串行的，并且按照类型进行merge
 ## 闪屏/winscope
 1. 挂载在Task下的DimLayer，一个 Task 对应一个 Dim ，会关联到Task 下不同的 Activity
 2. 闪白的情况就是 Dim Layer更新不及时；
@@ -51,6 +53,15 @@
 2. **先收到 DOWN**（InputMonitor 优先级高）。
 3. **原窗口也会收到 DOWN**（系统先广播 DOWN 给所有监听者，再判定所有权）。
 4. 若系统手势拦截成功，**发送 CANCEL 给原窗口**，并将事件流重定向给 TIS。
+## 桌面手势
+
+1. Launcher 准备启动 recents 动画
+2. 调用 InputConsumerController.getRecentsAnimationInputConsumer()
+       .registerInputConsumer()  ←── 注册 input consumer
+3. Launcher 启动 recents animation transition
+4. 动画运行中，通过 setInputConsumerEnabled(true) 启用触摸接收
+5. 动画结束，调用 unregisterInputConsumer() 注销
+
 # Input
 # 重要类
 
@@ -79,3 +90,4 @@
 	1. WM_SHOW_TRANSACTIONS
 	2. WM_DEBUG_FOCUS_LIGHT : "Changing Focus"
 	3. WM_DEBUG_FOCUS: "Looking Focus"
+7. `input_focus的Event日志` ：adb logcat -b events -c && adb logcat -b events -v threadtime | grep input_focus 

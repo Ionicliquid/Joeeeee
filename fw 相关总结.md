@@ -50,8 +50,9 @@
 6. sf类型的VSYNC信号到达后后，sf开始执行一帧的合成任务，之后再执行present唤醒HWC service进程执行图层合成送显；
 ## 无焦点窗口的ANR问题
 1. 首先还是确认 ANR的时间点： 结合dump window input 信息的 lastAnr 信息进一步确认；  
-2. 焦点的流转涉及 WMS -> SurfaceFlinger  -> InputDispatcher
-3. 对于 WMS ：
+2. touch 事件根据点击位置找到目标窗口再分发事件，事件处理超时则触发 ANR，没有找到目标窗口就 drop event。key 事件分发时，从记录的数据中查找焦点窗口，如果没有找到，inputdispatcher 线程 epoll_wait 休眠，超时时间到达后，从记录的数据中再次查找焦点窗口，如果还没有找到则触发 ANR。
+3. 焦点的流转涉及 WMS -> SurfaceFlinger  -> InputDispatcher
+4. 对于 WMS ：
 	1. 通过 dump windows信息，获取每个窗口的绘制状态和焦点窗口信息和焦点应用信息，对于普通应用来说，焦点窗口通常就是焦点应用。（例外：下拉通知栏）；
 	2. 从日志中过滤 Changing Focus，Changing Focus调用最常见的来源就是 relayoutWindow，也就是窗口添加成功之后，WMS 处理窗口属性和 创建 SurfaceControl；
 	3. 从 Activity 1  启动 Activity 2，focus 变化从A1 到 null 再到 A2; 
@@ -62,9 +63,9 @@
 		5. 真正表示应用窗口可见的visible属性，
 			1. 对于A2来说，需要等到startingWindow绘制完成，在Transition动画开始前，设置为true;
 			2. 对于A1来说，需要Transition动画就结束后，通过finishTransition回调来提交隐藏；
-4. 对于 SurfaceFlinger
+5. 对于 SurfaceFlinger
 	1. 当 Changing Focus 发生变化，焦点窗口作为 Transaction 的一部分，与窗口属性一起**原子性地**提交给 SurfaceFlinger，焦点要更新成功，需要首帧绘制完成之后，由 SF 统一转发给 InputFlinger，用来保证了渲染与输入的同步一致；
-5. InputDispatcher 结合event 日志中的 `input_focus` tag
+6. InputDispatcher 结合event 日志中的 `input_focus` tag
 	1. Requesting ：由WMS输出，A1 pause执行完,失去焦点，A2 Starting Window 添加成功，请求将focus置空；
 	2. Focus leaving ：焦点离开A1，由InputDispatcher 输出
 	3. Focus Request ：由WMS输出，窗口relayout完成，请求焦点；

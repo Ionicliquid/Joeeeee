@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "2026年计划/2026-W24.md",
+                "file": "ANR.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "2026-W24"
+              "title": "ANR"
             }
           }
         ]
@@ -142,13 +142,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "2026年计划/2026-W24.md",
+                "file": "ANR.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "2026-W24 的大纲"
+              "title": "ANR 的大纲"
             }
           },
           {
@@ -171,12 +171,12 @@
             "state": {
               "type": "calendar",
               "state": {},
-              "icon": "calendar-with-checkmark",
-              "title": "Calendar"
+              "icon": "lucide-ghost",
+              "title": "calendar"
             }
           }
         ],
-        "currentTab": 5
+        "currentTab": 3
       }
     ],
     "direction": "horizontal",
@@ -234,18 +234,20 @@
   },
   "active": "76a9c7904c9278f4",
   "lastOpenFiles": [
-    "2026年计划/2026-W23.md",
-    "2026年计划/2026-W24.md",
-    "面试/复习准备.md",
-    "framework/framework.md",
-    "教学文档.md",
+    "Pasted image 20260610172057.png",
     "fw 相关总结.md",
     "面试/Top100.md",
+    "finishDraw.md",
+    "补充.md",
+    "简历.md",
+    "framework/framework.md",
+    "2026年计划/2026-W24.md",
+    "2026年计划/2026-W23.md",
+    "面试/复习准备.md",
+    "教学文档.md",
     "framework/总结复盘.md",
     "面试/简历.md",
     "framework/perfetto.md",
-    "finishDraw.md",
-    "简历.md",
     "未命名.md",
     "framework/Activity启动流程 2.puml",
     "framework/Activity启动流程 1.puml",
@@ -255,7 +257,6 @@
     "2026年计划/2026-W22：失败.md",
     "2026年计划/2026-W21：失败.md",
     "2026年计划/W09～W14(2.24~4.5) 42 天计划.md",
-    "补充.md",
     "总结.md",
     "2026-W22.md",
     "学习技巧/日、周、月、年.png",
@@ -265,7 +266,6 @@
     "学习技巧/复盘方法-2.md",
     "学习技巧/复盘.md",
     "其他/每日口语.md",
-    "2026年计划/W15-W29：100 天.md",
     "framework/Pasted image 20260428105118.png",
     "学习技巧/更有效的复盘.png",
     "framework/应用窗口显示流程.puml",
