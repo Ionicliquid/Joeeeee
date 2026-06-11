@@ -27,12 +27,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "面试/Top100.md",
+                "file": "fw 相关总结.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Top100"
+              "title": "fw 相关总结"
             }
           }
         ],
@@ -93,7 +93,8 @@
       }
     ],
     "direction": "horizontal",
-    "width": 422.5024719238281
+    "width": 200,
+    "collapsed": true
   },
   "right": {
     "id": "dba7657d843abeea",
@@ -186,8 +187,8 @@
             "state": {
               "type": "calendar",
               "state": {},
-              "icon": "calendar-with-checkmark",
-              "title": "Calendar"
+              "icon": "lucide-ghost",
+              "title": "calendar"
             }
           }
         ],
@@ -249,6 +250,7 @@
   },
   "active": "3ca0f4845ac9304e",
   "lastOpenFiles": [
+    "面试/Top100.md",
     "2026年计划/2026-W23：失败.md",
     "2026年计划/W15-W29：100 天.md",
     "ANR.md",
@@ -258,7 +260,6 @@
     "framework/framework.md",
     "教学文档.md",
     "fw 相关总结.md",
-    "面试/Top100.md",
     "framework/总结复盘.md",
     "面试/简历.md",
     "framework/perfetto.md",

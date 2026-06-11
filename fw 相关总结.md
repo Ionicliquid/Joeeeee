@@ -4,18 +4,18 @@
 	2. Transition：具体过渡动画的实体类，它的主要生命周期包含收集中（collectiing），启动（started） ，播放中（playing），结束（finished)；
 2. WMShell: 运行在SystemUI进程的模块，其核心类包含
 	1. Transitions：主要负责相关过渡动画的具体播放相关逻辑
-	2. ActiveTransition：具体过渡动画的实体类
+	2. ActiveTransition：具体过渡动画的实体类，每一个轨道都有唯一ActiveTransition，轨道相同则触发merge，开始事务和结束事务都合并到上一个Transition结束后处理；
 3. 启动应用时，Launcher会构造ActivityOptions将RemoteTransition打包，RemoteTransition实现startAnimation方法接收leash用于同步播放窗口动画；
 4. 进入到ATMS，ActivityStarter在启动对应Activity前，通过TransitionController创建Transition，将状态置为收集中，同时初始化SyncGroup；
-	- 启动动画来说，会收集4个WindowContainer，也就是应用的ActivityRecord和Task，Launcher的ActivityRecord和壁纸，同时也会将 StartingWindow 加入到 应用的ActivityRecord中，跟随 ActivityRecord 的Surface 一起动画，这些窗口容器都会保存在 SyncGroup中，用于检测窗口的状态；
+	- 启动动画来说，会收集4个WindowContainer，也就是应用的ActivityRecord和Task，Launcher的ActivityRecord和壁纸交给SyncGroup管理。
 5. 之后通知Shell，完成ActiveTransition和TransitionHandler的初始化，同时Transition进入启动状态；
-6. 等待WMS回调BlastSyncEngine判断SyncGroup中所有窗口都绘制完成，此时回调的来源Starting Window的绘制完成，回调core的onTransactionReady和shell的onTransitionReady，进入播放状态；
-7. 获取ActivityOptions中RemoteTransition进行动画的播放，动画结束，回调finishCallback;
+6. 当应用的 StartingWindow 绘制完成，所有窗口准备就绪 回调core的onTransactionReady，准备启动事务和结束事务 交给 shell的onTransitionReady，进入播放状态；
 	1. 动画播放时操作启动事务
-		1. startTransaction：过滤收集的WindowContainer，只保留Task信息和壁纸窗口，创建新的绘制树，将关联窗口转移到新的根节点，统一播放；
+		1. startTransaction：创建新的绘制树，将关联窗口转移到新的根节点，统一播放；
 	2. 动画结束操作结束事务
 		1. 将节点reparent到正常窗口树；
 	3. 以启动过程为例：A ->B，动画播放前A,B都会显示；动画结束B显示，A隐藏；
+7. 动画结束，回调finishcallback，将Launcher ActivityRecord的visible属性置为false;
 ## 首帧页面的显示流程
 1. WMS首次添加Window时会构建一颗窗口层级树，层级分为 0～36 层，共 37 层，根节点为RootWindowContainer，第二层节点为DisplayContent对应屏幕数量，叶子节点为 WindowState，应用Activity对应的窗口路径为RootWindowContainer -> DisplayContent->TaskDisplayArea -> Task ->ActivityRecord -> WindowState;
 2. AT在执行完Activity onResume 后，创建 VRI，同时将onCreate 中 创建的 decorView 加入到集合中统一管理，VRI 是链接 View 体系与 WMS的桥梁；
