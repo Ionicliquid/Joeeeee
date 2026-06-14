@@ -63,6 +63,19 @@
 5. 动画结束，调用 unregisterInputConsumer() 注销
 
 # Input
+1. getevent -lrt ： 驱动往应用空间写入数据；
+## InputManager
+1. 跟随 系统启动 InputManagerService
+	1. 在 native 层还添加了：inputFlinger
+	2. 运行InputReader/InputDispatcher 线程
+	3. EventHub绑定 InputReader：epoll 机制直接与底层打交道
+## InputReader
+1. EventHub.getEvents
+	1. 
+## ANR
+1. 应用端没有在指定时间内发送 finish 时间
+	1. 第一次卡了 500ms：应用还没准备好
+	2. 
 # 重要类
 
 ## SurfaceControl
@@ -90,4 +103,5 @@
 	1. WM_SHOW_TRANSACTIONS
 	2. WM_DEBUG_FOCUS_LIGHT : "Changing Focus"
 	3. WM_DEBUG_FOCUS: "Looking Focus"
+	4. WM_DEBUG_WINDOW_TRANSITIONS_MIN
 7. `input_focus的Event日志` ：adb logcat -b events -c && adb logcat -b events -v threadtime | grep input_focus 
