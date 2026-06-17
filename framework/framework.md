@@ -71,7 +71,8 @@
 	3. EventHub绑定 InputReader：epoll 机制直接与底层打交道
 ## InputReader
 1. EventHub.getEvents
-	1. 
+## InputDispatcher
+1. 手势GlobalMonitor :总是会接受到事件
 ## ANR
 1. 应用端没有在指定时间内发送 finish 时间
 	1. 第一次卡了 500ms：应用还没准备好
