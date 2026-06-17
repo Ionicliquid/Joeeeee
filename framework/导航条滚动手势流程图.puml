@@ -1,0 +1,39 @@
+@startuml
+'https://plantuml.com/sequence-diagram
+
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam sequenceMessageAlign center
+
+title 场景四: 从App横向滑动 → 切换到另一个App (NEW_TASK)\n涉及 WMS Transition 启动新Activity
+
+participant "AbsSwipeUpHandler" as Handler
+participant "RecentsView" as RV
+participant "ActivityManager\nWrapper" as AMW
+participant "WMS" as WMS
+participant "Shell" as Shell
+
+... 滑动手势进行中 ...
+
+Handler -> RV: 用户横向滑动\nRecentsView.scrollTo()
+
+User -> Handler: ACTION_UP
+
+Handler -> Handler: calculateEndTarget()
+note right of Handler #C8E6C9: **isScrollingToNewTask()\n→ NEW_TASK**
+
+Handler -> Handler: animateToProgressInternal()
+note right of Handler: endShift = 1\n动画到 Recents 视图
+
+Handler -> Handler: onSettledOnEndTarget()
+note right of Handler: → case NEW_TASK
+
+Handler -> RV: getNextPageTaskView()
+Handler -> AMW: startActivityFromRecents(taskId)
+AMW -> WMS: ★ WMS Transition ★\n启动新 App 窗口动画
+
+Handler -> Handler: mRecentsAnimationController\n.finish(false, null)
+Handler -> Shell: 清理 Recents Animation
+
+note over WMS: 新 App Activity 启动\n窗口由 WMS 管理
+@enduml

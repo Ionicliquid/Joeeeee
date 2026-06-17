@@ -57,8 +57,8 @@
 	2. 从日志中过滤 Changing Focus，Changing Focus调用最常见的来源就是 relayoutWindow，也就是窗口添加成功之后，WMS 处理窗口属性和 创建 SurfaceControl；
 	3. 从 Activity 1  启动 Activity 2，focus 变化从A1 到 null 再到 A2; 
 		1. ActivityRecord 的可见性通过2个字段描述mVisibleRequested 和visible
-		2. 当A1的pause成功回调，调用A1和A2对应ActivityRecord 的setVisibility方法，将mVisibleRequested分别置为false和true;
-		3. A2的startingWindow 添加成功，由于startingWindow 不处理事件，Changing Focus 将当前的焦点窗口置为空；
+		2. 当A1的pause成功回调，调用A1和A2对应ActivityRecord 的setVisibility方法，将mVisibleRequested分别置为false和true, 热启动时此时就将焦点置为空;
+		3. 冷启动时A2的startingWindow 添加成功 ，由于startingWindow 不处理事件，Changing Focus 将当前的焦点窗口置为空；
 		4. 当A2应用进程创建成功并完成Application创建与绑定后，将焦点应用设置为A2，执行真正的启动Activity方法，执行完resume方法，通过VRI，完成窗口的创建和relayout后 将焦点设置为应用窗口；
 		5. 真正表示应用窗口可见的visible属性，
 			1. 对于A2来说，需要等到startingWindow绘制完成，在Transition动画开始前，设置为true;

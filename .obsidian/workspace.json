@@ -27,12 +27,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "ANR.md",
+                "file": "framework/Android-Shell-Transition-深度分析.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "ANR"
+              "title": "Android-Shell-Transition-深度分析"
             }
           }
         ],
@@ -157,13 +157,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "ANR.md",
+                "file": "framework/Android-Shell-Transition-深度分析.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "ANR 的大纲"
+              "title": "Android-Shell-Transition-深度分析 的大纲"
             }
           },
           {
@@ -186,8 +186,8 @@
             "state": {
               "type": "calendar",
               "state": {},
-              "icon": "calendar-with-checkmark",
-              "title": "Calendar"
+              "icon": "lucide-ghost",
+              "title": "calendar"
             }
           }
         ],
@@ -249,21 +249,27 @@
   },
   "active": "3ca0f4845ac9304e",
   "lastOpenFiles": [
+    "fw 相关总结.md",
+    "framework/Android输入系统-触摸与按键事件分发流程及ANR机制分析.md",
+    "framework/Android-Shell-Transition-深度分析.md",
+    "framework/导航条滚动手势流程图.puml",
+    "framework/导航栏手势流程分析.md",
+    "framework/导航栏滑动流程_PlantUML.md",
+    "ANR.md",
+    "教学文档.md",
     "自律就是在压抑自己的欲望吗？——Kaiser 回答.md",
+    "framework/Android冷启动Activity启动流程分析.md",
+    "framework/framework.md",
+    "面试/Top100.md",
     "2026年计划/2026-W25：21 天，复习准备面试.md",
     "2026年计划/W09～W14(2.24~4.5) 42 天计划：失败.md",
     "2026年计划/W15-W29：100 天：失败.md",
     "2026年计划/2026-W24：失败.md",
-    "ANR.md",
-    "framework/framework.md",
     "2026-W26.md",
-    "教学文档.md",
-    "fw 相关总结.md",
     "framework/input",
     "Pasted image 20260610172057.png",
     "简历.md",
     "finishDraw.md",
-    "面试/Top100.md",
     "2026年计划/2026-W23：失败.md",
     "面试/复习准备.md",
     "framework/总结复盘.md",
@@ -271,16 +277,11 @@
     "framework/perfetto.md",
     "framework/Activity启动流程 2.puml",
     "framework/Activity启动流程 1.puml",
-    "framework/Android冷启动Activity启动流程分析.md",
     "framework/Android图形渲染管线深度解析.md",
     "framework/Activity启动流程.puml",
     "2026年计划/2026-W22：失败.md",
     "2026年计划/2026-W21：失败.md",
-    "补充.md",
-    "总结.md",
-    "2026-W22.md",
     "学习技巧/日、周、月、年.png",
-    "学习技巧/费曼学习法.md",
     "学习技巧/KISS复盘法.png",
     "学习技巧/PDCA.png",
     "framework/Pasted image 20260428105118.png",
@@ -291,7 +292,6 @@
     "framework/window.txt",
     "framework/桌面拖拽.puml",
     "framework/拖拽流程图.puml",
-    "framework/Shell Transition流程图.puml",
     "framework/Pasted image 20260428143414.png",
     "Android/文档图片/kmp/跨平台代码的复用.png",
     "Android/文档图片/mvc_mvp_mvvm.png"
