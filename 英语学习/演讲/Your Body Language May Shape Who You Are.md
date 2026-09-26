@@ -1,0 +1,21 @@
+# Your Body Language May Shape Who You Are
+
+**Amy Cuddy** – TEDGlobal 2012
+
+So I want to start by offering you a free no-tech life hack, and all it requires of you is this: that you change your posture for two minutes. But before I give it away, I want to ask you to right now do a little audit of your body and what you're doing with your body. So how many of you are sort of making yourselves smaller? Maybe you're hunching, crossing your legs, maybe wrapping your ankles. Sometimes we hold onto our arms like this. Sometimes we spread out. I see you. So I want you to pay attention to what you're doing right now. We're going to come back to that in a few minutes, and I'm hoping that if you learn to tweak this a little bit, it could significantly change the way your life unfolds.
+
+So, we're really fascinated with body language, and we're particularly interested in other people's body language. You know, we're interested in, like, you know — an awkward interaction, or a smile, or a contemptuous glance, or maybe a very awkward wink, or maybe even something like a handshake.
+
+So a handshake, or the lack of a handshake, can have us talking for weeks and weeks and weeks. Even the BBC and The New York Times. So obviously when we think about nonverbal behavior, or body language — but we call it nonverbals as social scientists — it's language, so we think about communication. When we think about communication, we think about interactions. So what is your body language communicating to me? What's mine communicating to you? And there's a lot of reason to believe that this is a valid way to look at this.
+
+So social scientists have spent a lot of time looking at the effects of our body language, or other people's body language, on judgments. And we make sweeping judgments and inferences from body language. And those judgments can predict really meaningful life outcomes like who we hire or promote, who we ask out on a date. For example, Nalini Ambady, a researcher at Tufts University, shows that when people watch 30-second soundless clips of real physician-patient interactions, their judgments of the physician's niceness predict whether or not that physician will be sued. So it doesn't have to do so much with whether or not that physician was incompetent, but do we like that person and how we feel about them.
+
+We are really fascinated with body language, and we're particularly interested in other people's body language. You know, we're interested in, like, you know — an awkward interaction, or a smile, or a contemptuous glance, or maybe a very awkward wink, or maybe even something like a handshake.
+
+Now, we also know that our body language governs how we think and feel about ourselves. So, for example, we know that when we cross our arms, we're more persistent at solving problems. When we cross our arms, we're also more likely to be less open to new ideas. We know that when we sit up straight, we are more likely to feel better about ourselves.
+
+But the big question is: Can we change our body language to change the way we feel about ourselves? And my research, with my collaborator Dana Carney, has shown that we can. We have found that when people adopt powerful poses — for example, standing like Wonder Woman, or sitting with their feet up on the desk — they actually feel more powerful and more confident. And not only that, but their hormone levels change. Specifically, testosterone (the dominance hormone) goes up, and cortisol (the stress hormone) goes down.
+
+And we can use this to our advantage in high-stakes situations, like job interviews, public speaking, or negotiations. So before you go into that next stressful situation, I want you to try this: take two minutes to adopt a powerful pose in private. You can do it in the bathroom, in your car, in an elevator. Just stand tall, open up your chest, and take up space. It will change your brain, change your hormones, and change your behavior, making you more assertive and less stressed.
+
+So next time you're feeling nervous, don't shrink. Don't fold yourself up. Instead, expand. Try this simple life hack, and see how it transforms your life.

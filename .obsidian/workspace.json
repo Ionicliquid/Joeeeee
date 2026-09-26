@@ -4,39 +4,67 @@
     "type": "split",
     "children": [
       {
-        "id": "baf5c4bb4d6e735a",
+        "id": "d65bff6fdd304d17",
         "type": "tabs",
         "children": [
           {
-            "id": "76a9c7904c9278f4",
+            "id": "8d1086d854495912",
             "type": "leaf",
             "state": {
               "type": "markdown",
               "state": {
-                "file": "2026年计划/2026-W25：21 天，复习准备面试.md",
+                "file": "英语学习/演讲/Your Body Language May Shape Who You Are.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "2026-W25：21 天，复习准备面试"
+              "title": "Your Body Language May Shape Who You Are"
             }
           },
           {
-            "id": "3ca0f4845ac9304e",
+            "id": "dee2718b0d8a25d7",
             "type": "leaf",
             "state": {
               "type": "markdown",
               "state": {
-                "file": "framework/Android-Shell-Transition-深度分析.md",
+                "file": "英语学习/演讲/The Happy Secret to Better Work.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Android-Shell-Transition-深度分析"
+              "title": "The Happy Secret to Better Work"
+            }
+          },
+          {
+            "id": "a1a16cdc777b3537",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "英语学习/演讲/4. The Power of Vulnerability.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "4. The Power of Vulnerability"
+            }
+          },
+          {
+            "id": "c7b63354a85b79da",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "2026年计划/五份计划/执行手册：五份计划.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "执行手册：五份计划"
             }
           }
         ],
-        "currentTab": 1
+        "currentTab": 3
       }
     ],
     "direction": "vertical"
@@ -56,7 +84,9 @@
               "type": "file-explorer",
               "state": {
                 "sortOrder": "alphabetical",
-                "autoReveal": false
+                "autoReveal": false,
+                "showSearch": false,
+                "searchQuery": ""
               },
               "icon": "lucide-folder-closed",
               "title": "文件列表"
@@ -93,7 +123,7 @@
       }
     ],
     "direction": "horizontal",
-    "width": 422.5024719238281
+    "width": 289.5024719238281
   },
   "right": {
     "id": "dba7657d843abeea",
@@ -152,18 +182,32 @@
             }
           },
           {
+            "id": "5c1d34900117ff0c",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "面试/重点知识.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "重点知识"
+            }
+          },
+          {
             "id": "2e3a231118f78556",
             "type": "leaf",
             "state": {
               "type": "outline",
               "state": {
-                "file": "framework/Android-Shell-Transition-深度分析.md",
+                "file": "2026年计划/五份计划/执行手册：五份计划.md",
                 "followCursor": false,
-                "showSearch": false,
+                "showSearch": true,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Android-Shell-Transition-深度分析 的大纲"
+              "title": "大纲"
             }
           },
           {
@@ -186,19 +230,22 @@
             "state": {
               "type": "calendar",
               "state": {},
-              "icon": "lucide-ghost",
-              "title": "calendar"
+              "icon": "calendar-with-checkmark",
+              "title": "Calendar"
             }
           }
         ],
-        "currentTab": 3
+        "currentTab": 4
       }
     ],
     "direction": "horizontal",
-    "width": 288.5
+    "width": 438.5
   },
   "left-ribbon": {
     "hiddenItems": {
+      "nutstore-sync:开始同步": false,
+      "nutstore-sync:停止同步": false,
+      "nutstore-sync:打开 Chatbox": false,
       "switcher:打开快速切换": false,
       "graph:查看关系图谱": false,
       "canvas:新建白板": false,
@@ -208,92 +255,53 @@
       "bases:新建数据库": false
     }
   },
-  "floating": {
-    "id": "137ae1e487b284d4",
-    "type": "floating",
-    "children": [
-      {
-        "id": "f077b39a68874871",
-        "type": "window",
-        "children": [
-          {
-            "id": "2550fc69ad6dc7cb",
-            "type": "tabs",
-            "children": [
-              {
-                "id": "aa7aae615810b3a0",
-                "type": "leaf",
-                "state": {
-                  "type": "markdown",
-                  "state": {
-                    "file": "面试/Top100.md",
-                    "mode": "source",
-                    "source": false
-                  },
-                  "icon": "lucide-file",
-                  "title": "Top100"
-                }
-              }
-            ]
-          }
-        ],
-        "direction": "vertical",
-        "x": -1024,
-        "y": 166,
-        "width": 1024,
-        "height": 800,
-        "maximize": false,
-        "zoom": -0.5
-      }
-    ]
-  },
-  "active": "3ca0f4845ac9304e",
+  "active": "1af997c8108ee958",
   "lastOpenFiles": [
-    "fw 相关总结.md",
-    "framework/Android输入系统-触摸与按键事件分发流程及ANR机制分析.md",
-    "framework/Android-Shell-Transition-深度分析.md",
-    "framework/导航条滚动手势流程图.puml",
-    "framework/导航栏手势流程分析.md",
-    "framework/导航栏滑动流程_PlantUML.md",
-    "ANR.md",
-    "教学文档.md",
-    "自律就是在压抑自己的欲望吗？——Kaiser 回答.md",
-    "framework/Android冷启动Activity启动流程分析.md",
-    "framework/framework.md",
-    "面试/Top100.md",
-    "2026年计划/2026-W25：21 天，复习准备面试.md",
-    "2026年计划/W09～W14(2.24~4.5) 42 天计划：失败.md",
+    "2026年计划/五份计划/减重计划：每日记录.md",
+    "2026年计划/五份计划/执行手册：五份计划.md",
+    "2026年计划/自律.md",
+    "2026年计划/_周模板.md",
+    "2026年计划/2026 年计划.md",
+    "2026年计划/五份计划/读书计划：书目与顺位.md",
+    "2026年计划/五份计划/性能优化学习路径：总纲.md",
+    "2026年计划/五份计划/英语口语计划：通勤三段版.md",
+    "2026年计划/五份计划/总编排：每周进度（9.25~12.31）.md",
+    "2026年计划/五份计划/口才计划：周末版.md",
+    "2026年计划/五份计划/减重计划：执行手册.md",
+    "2026年计划/五份计划/1年英语口语流利计划：分阶段周计划表.md",
+    "2026年计划/五份计划/总编排：每周进度（9.25~12.31）.md.tmp.428.1790346999289",
+    "2026年计划/五份计划/总编排：每周进度（9.25~12.31）.md.tmp.428.1790346988667",
+    "2026年计划/总编排：每周进度（9.25~12.31）.md",
+    "2026年计划/五份计划",
+    "2026年计划/总编排：五份计划.md",
+    "2026年计划/总编排：每周进度（9.25~12.31）.md.tmp.428.1790346268429",
+    "2026年计划/1年英语口语流利计划：分阶段周计划表.md.tmp.428.1790345786890",
+    "Android/性能优化学习路径：总纲.md",
+    "读书笔记/读书计划：书目与顺位.md",
+    "其他/口才计划：周末版.md",
+    "英语学习/英语口语计划：通勤三段版.md",
+    "英语学习/英语口语计划：通勤三段版.md.tmp.428.1790345786313",
     "2026年计划/W15-W29：100 天：失败.md",
-    "2026年计划/2026-W24：失败.md",
-    "2026-W26.md",
-    "framework/input",
+    "英语学习/观影学英语/美剧片段台词文稿.md",
+    "2026年计划/减重计划：每日记录.md.tmp.428.1790343260901",
+    "英语学习/观影学英语/观影学英语.md",
+    "其他/工作.md",
+    "2026年计划/减重计划：每日记录.md",
+    "2026年计划/减重计划：执行手册.md",
+    "2026年计划/2026-W38.md",
+    "2026年计划/2026-W33.md",
+    "Android/framework/container2.txt",
+    "Android/framework/input.txt",
+    "Android/framework/display2.txt",
     "Pasted image 20260610172057.png",
-    "简历.md",
-    "finishDraw.md",
-    "2026年计划/2026-W23：失败.md",
-    "面试/复习准备.md",
-    "framework/总结复盘.md",
-    "面试/简历.md",
-    "framework/perfetto.md",
-    "framework/Activity启动流程 2.puml",
-    "framework/Activity启动流程 1.puml",
-    "framework/Android图形渲染管线深度解析.md",
-    "framework/Activity启动流程.puml",
-    "2026年计划/2026-W22：失败.md",
-    "2026年计划/2026-W21：失败.md",
     "学习技巧/日、周、月、年.png",
     "学习技巧/KISS复盘法.png",
     "学习技巧/PDCA.png",
-    "framework/Pasted image 20260428105118.png",
+    "Android/framework/Pasted image 20260428105118.png",
     "学习技巧/更有效的复盘.png",
-    "framework/应用窗口显示流程.puml",
     "学习技巧/GRAI.png",
-    "framework/containers.txt",
-    "framework/window.txt",
-    "framework/桌面拖拽.puml",
-    "framework/拖拽流程图.puml",
-    "framework/Pasted image 20260428143414.png",
-    "Android/文档图片/kmp/跨平台代码的复用.png",
-    "Android/文档图片/mvc_mvp_mvvm.png"
+    "Android/framework/Pasted image 20260428143414.png",
+    "Android/Android/文档图片/kmp/跨平台代码的复用.png",
+    "Android/Android/文档图片/mvc_mvp_mvvm.png"
   ]
 }
